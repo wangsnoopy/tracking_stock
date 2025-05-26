@@ -45,6 +45,8 @@ def gtid():
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
     return 904081341  # replace with your GT ID number
   		  	   		 	 	 			  		 			 	 	 		 		 	
+def study_group():
+    return "awang758"
   		  	   		 	 	 			  		 			 	 	 		 		 	
 def get_spin_result(win_prob):  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -69,23 +71,26 @@ def test_code():
     np.random.seed(gtid())  # do this only once  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(get_spin_result(win_prob))  # test the roulette spin  		  	   		 	 	 			  		 			 	 	 		 		 	
     # add your code here to implement the experiments
-    # plot_f1()
-    # plot_f2()
-    # plot_f3()
+    plot_f1()
+    plot_f2()
+    plot_f3()
     plot_f4()
     plot_f5()
 
 def gambling_exp1(target=80, win_prob=18.0 / 38.0, max_spins=300):
     episode_winnings = 0
-    winnings_record = []
-    total_spins = 0  # explicit spin counter
+    winnings = np.zeros(max_spins)
+    total_spins = 0
+    i = 0
 
     while episode_winnings < target and total_spins < max_spins:
         bet_amount = 1
         won = False
-        while not won:
+
+        while not won and i < max_spins:
             spin_res = get_spin_result(win_prob)
             total_spins += 1
+
             if spin_res:
                 episode_winnings += bet_amount
                 won = True
@@ -93,24 +98,34 @@ def gambling_exp1(target=80, win_prob=18.0 / 38.0, max_spins=300):
                 episode_winnings -= bet_amount
                 bet_amount *= 2
 
-            winnings_record.append(episode_winnings)
+            winnings[i] = episode_winnings
+            i += 1
+
             if episode_winnings >= target or total_spins >= max_spins:
                 break
 
-    return winnings_record
+        if i >= max_spins:
+            break
+
+    if i < max_spins:
+        winnings[i:] = episode_winnings
+
+    return winnings
+
 
 def gambling_exp2(target=80, win_prob=18.0 / 38.0, max_spins=300, bankroll=256):
     episode_winnings = 0
-    winnings_record = []
+    winnings = np.zeros(max_spins)
     total_spins = 0
+    i = 0
 
     while episode_winnings < target and total_spins < max_spins and episode_winnings > -bankroll:
         bet_amount = 1
         won = False
 
-        while not won:
+        while not won and i < max_spins:
             if bet_amount > (bankroll + episode_winnings):
-                bet_amount = bankroll + episode_winnings  # can't bet more than current bankroll
+                bet_amount = bankroll + episode_winnings
 
             spin_res = get_spin_result(win_prob)
             total_spins += 1
@@ -122,20 +137,19 @@ def gambling_exp2(target=80, win_prob=18.0 / 38.0, max_spins=300, bankroll=256):
                 episode_winnings -= bet_amount
                 bet_amount *= 2
 
-            winnings_record.append(episode_winnings)
+            winnings[i] = episode_winnings
+            i += 1
 
-            # If player is bankrupt, stop playing
             if episode_winnings <= -bankroll or total_spins >= max_spins or episode_winnings >= target:
                 break
 
-    # Pad with final value if terminated early
-    if len(winnings_record) < max_spins:
-        winnings_record += [winnings_record[-1]] * (max_spins - len(winnings_record))
+        if i >= max_spins:
+            break
 
-    return winnings_record
+    if i < max_spins:
+        winnings[i:] = episode_winnings
 
-def run_episodes(num_episodes=1001, **kwargs):
-    return [gambling_exp1(**kwargs) for _ in range(num_episodes)]
+    return winnings
 
 def plot_f1():
     plt.figure(figsize=(10, 6))
@@ -156,9 +170,8 @@ def plot_f1():
     plt.show()
 
 def plot_f2():
-    data = run_episodes()
-    max_len = 300
-    padded_data = np.array([d + [d[-1]] * (max_len - len(d)) for d in data])
+    data = [gambling_exp1() for _ in range(1000)]
+    padded_data = np.array(data)
 
     mean = np.mean(padded_data, axis=0)
     std = np.std(padded_data, axis=0)
@@ -177,9 +190,8 @@ def plot_f2():
     plt.show()
 
 def plot_f3():
-    data = run_episodes()
-    max_len = 300
-    padded_data = np.array([d + [d[-1]] * (max_len - len(d)) for d in data])
+    data = [gambling_exp1() for _ in range(1000)]
+    padded_data = np.array(data)
 
     median = np.median(padded_data, axis=0)
     std = np.std(padded_data, axis=0)
