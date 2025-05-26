@@ -69,18 +69,23 @@ def test_code():
     np.random.seed(gtid())  # do this only once  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(get_spin_result(win_prob))  # test the roulette spin  		  	   		 	 	 			  		 			 	 	 		 		 	
     # add your code here to implement the experiments
-    plot_f1()
-    plot_f2()
-    plot_f3()
+    # plot_f1()
+    # plot_f2()
+    # plot_f3()
+    plot_f4()
+    plot_f5()
 
-def gambling_exp1(target=80, win_prob=18.0/38.0, max_spins=300):
+def gambling_exp1(target=80, win_prob=18.0 / 38.0, max_spins=300):
     episode_winnings = 0
     winnings_record = []
-    while episode_winnings < target and len(winnings_record) < max_spins:
-        won = False
+    total_spins = 0  # explicit spin counter
+
+    while episode_winnings < target and total_spins < max_spins:
         bet_amount = 1
+        won = False
         while not won:
             spin_res = get_spin_result(win_prob)
+            total_spins += 1
             if spin_res:
                 episode_winnings += bet_amount
                 won = True
@@ -89,8 +94,44 @@ def gambling_exp1(target=80, win_prob=18.0/38.0, max_spins=300):
                 bet_amount *= 2
 
             winnings_record.append(episode_winnings)
-            if episode_winnings >= target or len(winnings_record)>= 300:
+            if episode_winnings >= target or total_spins >= max_spins:
                 break
+
+    return winnings_record
+
+def gambling_exp2(target=80, win_prob=18.0 / 38.0, max_spins=300, bankroll=256):
+    episode_winnings = 0
+    winnings_record = []
+    total_spins = 0
+
+    while episode_winnings < target and total_spins < max_spins and episode_winnings > -bankroll:
+        bet_amount = 1
+        won = False
+
+        while not won:
+            if bet_amount > (bankroll + episode_winnings):
+                bet_amount = bankroll + episode_winnings  # can't bet more than current bankroll
+
+            spin_res = get_spin_result(win_prob)
+            total_spins += 1
+
+            if spin_res:
+                episode_winnings += bet_amount
+                won = True
+            else:
+                episode_winnings -= bet_amount
+                bet_amount *= 2
+
+            winnings_record.append(episode_winnings)
+
+            # If player is bankrupt, stop playing
+            if episode_winnings <= -bankroll or total_spins >= max_spins or episode_winnings >= target:
+                break
+
+    # Pad with final value if terminated early
+    if len(winnings_record) < max_spins:
+        winnings_record += [winnings_record[-1]] * (max_spins - len(winnings_record))
+
     return winnings_record
 
 def run_episodes(num_episodes=1001, **kwargs):
@@ -98,54 +139,103 @@ def run_episodes(num_episodes=1001, **kwargs):
 
 def plot_f1():
     plt.figure(figsize=(10, 6))
+    max_len = 300
     for _ in range(10):
         winnings = gambling_exp1()
+        if len(winnings) < max_len:
+            winnings += [winnings[-1]] * (max_len - len(winnings))
+        else:
+            winnings = winnings[:max_len]
         plt.plot(winnings)
     plt.title("Figure 1:")
     plt.xlabel("Spin Number")
     plt.ylabel("Winnings")
     plt.ylim(-256, 100)
     plt.xlim(0, 300)
-    plt.savefig("images/figure1.png")
+    plt.legend()
     plt.show()
 
 def plot_f2():
-    data = np.array(1000)
-    mean = np.mean(data, axis=0)
-    std = np.std(data,axis=0)
-    plt.figure(figsize=(10, 6))
-    plt.plot(mean, lable="Mean", color="blue")
-    plt.plot(mean + std, lable="Mean + Std", color="red")
-    plt.plot(mean - std, lable="Mean - Std", color="green")
+    data = run_episodes()
+    max_len = 300
+    padded_data = np.array([d + [d[-1]] * (max_len - len(d)) for d in data])
 
+    mean = np.mean(padded_data, axis=0)
+    std = np.std(padded_data, axis=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(mean, label="Mean", color="blue")
+    plt.plot(mean + std, label="Upper", color="red")
+    plt.plot(mean - std, label="Lower", color="green")
     plt.title("Figure 2:")
     plt.xlabel("Spin Number")
     plt.ylabel("Winnings")
     plt.ylim(-256, 100)
     plt.xlim(0, 300)
     plt.grid(True)
-    plt.savefig("images/figure2.png")
+    plt.legend()
     plt.show()
 
 def plot_f3():
-    data = np.array(1000)
-    median = np.median(data, axis=0)
-    std = np.std(data, axis=0)
+    data = run_episodes()
+    max_len = 300
+    padded_data = np.array([d + [d[-1]] * (max_len - len(d)) for d in data])
+
+    median = np.median(padded_data, axis=0)
+    std = np.std(padded_data, axis=0)
 
     plt.figure(figsize=(10, 6))
-    plt.plot(median, lable="Median", color="orange")
-    plt.plot(median + std, lable="Median + Std", linestyle="--", color="blue")
-    plt.plot(median - std, lable="Median - Std", linestyle="--", color="green")
-
+    plt.plot(median, label="Median", color="orange")
+    plt.plot(median + std, label="Upper", color="blue")
+    plt.plot(median - std, label="Lower", color="green")
     plt.title("Figure 3:")
     plt.xlabel("Spin Number")
     plt.ylabel("Winnings")
     plt.ylim(-256, 100)
     plt.xlim(0, 300)
     plt.grid(True)
-    plt.savefig("images/figure3.png")
+    plt.legend()
     plt.show()
 
+def plot_f4():
+    data = [gambling_exp2() for _ in range(1000)]
+    padded_data = np.array(data)
+
+    mean = np.mean(padded_data, axis=0)
+    std = np.std(padded_data, axis=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(mean, label="Mean", color="blue")
+    plt.plot(mean + std, label="Upper", color="red")
+    plt.plot(mean - std, label="Lower", color="green")
+    plt.title("Figure 4")
+    plt.xlabel("Spin Number")
+    plt.ylabel("Winnings")
+    plt.ylim(-256, 100)
+    plt.xlim(0, 300)
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+def plot_f5():
+    data = [gambling_exp2() for _ in range(1000)]
+    padded_data = np.array(data)
+
+    median = np.median(padded_data, axis=0)
+    std = np.std(padded_data, axis=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(median, label="Median", color="orange")
+    plt.plot(median + std, label="Upper", color="blue")
+    plt.plot(median - std, label="Lower", color="green")
+    plt.title("Figure 5")
+    plt.xlabel("Spin Number")
+    plt.ylabel("Winnings")
+    plt.ylim(-256, 100)
+    plt.xlim(0, 300)
+    plt.grid(True)
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
