@@ -114,7 +114,7 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
         plt.ylabel('Normalized Price')
         plt.legend()
         plt.grid()
-        plt.savefig('Figure1.png')
+        plt.show()
 
     return optimized_allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -130,7 +130,7 @@ def test_code():
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Assess the portfolio  		  	   		 	 	 			  		 			 	 	 		 		 	
     allocations, cr, adr, sddr, sr = optimize_portfolio(  		  	   		 	 	 			  		 			 	 	 		 		 	
-        sd=start_date, ed=end_date, syms=symbols, gen_plot=False  		  	   		 	 	 			  		 			 	 	 		 		 	
+        sd=start_date, ed=end_date, syms=symbols, gen_plot=True
     )  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Print statistics  		  	   		 	 	 			  		 			 	 	 		 		 	
