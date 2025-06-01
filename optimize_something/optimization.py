@@ -115,8 +115,7 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
         plt.xlabel('Date')
         plt.ylabel('Normalized Price')
         plt.legend()
-        plt.grid(True)
-        plt.show()
+        plt.savefig('plot.png')
 
     return optimized_allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
