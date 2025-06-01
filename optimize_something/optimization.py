@@ -106,6 +106,8 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
         normed_portfolio = (prices / prices.iloc[0]).mul(optimized_allocs, axis=1).sum(axis=1)
         normed_SPY = prices_SPY / prices_SPY.iloc[0]
 
+        normed_portfolio = normed_portfolio.loc[normed_SPY.index]
+
         plt.figure(figsize=(10, 6))
         plt.plot(normed_portfolio, label='Optimized Portfolio', color='blue')
         plt.plot(normed_SPY, label='SPY', color='red')
@@ -113,7 +115,7 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
         plt.xlabel('Date')
         plt.ylabel('Normalized Price')
         plt.legend()
-        plt.grid()
+        plt.grid(True)
         plt.show()
 
     return optimized_allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
