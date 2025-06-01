@@ -222,8 +222,7 @@ def test_code():
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("plot.png")  # Save as required
-    plt.show()	  	   		 	 	 			  		 			 	 	 		 		 	
+    plt.show()
   		  	   		 	 	 			  		 			 	 	 		 		 	
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
     # This code WILL NOT be called by the auto grader  		  	   		 	 	 			  		 			 	 	 		 		 	
