@@ -199,7 +199,31 @@ def test_code():
     print(f"Volatility (stdev of daily returns): {sddr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(f"Average Daily Return: {adr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(f"Cumulative Return: {cr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
+
+
+    # Plotting the optimized portfolio vs SPY
+    prices_all = get_data(symbols + ["SPY"], pd.date_range(start_date, end_date))
+    prices = prices_all[symbols]
+    prices_SPY = prices_all["SPY"]
+
+    normed_prices = normalize_prices(prices)
+    port_val = compute_portfolio_value(normed_prices, allocations)
+
+    # Normalize SPY for comparison
+    normed_SPY = normalize_prices(prices_SPY)
+
+    # Plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(port_val, label='Optimized Portfolio')
+    plt.plot(normed_SPY, label='SPY')
+    plt.title("Optimized Portfolio vs SPY")
+    plt.xlabel("Date")
+    plt.ylabel("Normalized Price")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("plot.png")  # Save as required
+    plt.show()	  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
     # This code WILL NOT be called by the auto grader  		  	   		 	 	 			  		 			 	 	 		 		 	
