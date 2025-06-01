@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import pandas as pd  		  	   		 	 	 			  		 			 	 	 		 		 	
 from util import get_data, plot_data  
 import scipy.optimize as spo		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
+
 def author():  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
     :return: The GT username of the student  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -170,6 +170,7 @@ def optimize_portfolio(
         plt.ylabel("Normalized Price")
         plt.grid(True)
         plt.tight_layout()
+        plt.savefig('Figure1.png')
         plt.show()
 
     return allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
