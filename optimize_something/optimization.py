@@ -32,7 +32,7 @@ import numpy as np
 import matplotlib.pyplot as plt  		  	   		 	 	 			  		 			 	 	 		 		 	
 import pandas as pd  		  	   		 	 	 			  		 			 	 	 		 		 	
 from util import get_data, plot_data  
-import scipy.optimize as spo		  	   		 	 	 			  		 			 	 	 		 		 	
+from scipy.optimize import minimize
 
 def author():  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
