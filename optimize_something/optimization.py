@@ -54,126 +54,69 @@ def study_group():
 # This is the function that will be tested by the autograder  		  	   		 	 	 			  		 			 	 	 		 		 	
 # The student must update this code to properly implement the functionality  	
 # #################################################################################### #	  	   		 	 	 			  		 			 	 	 		 		 	
-def normalize_prices(prices):
-    return prices / prices.iloc[0]
+def get_portfolio_stats(prices, allocs):
+    normed = prices / prices.iloc[0]
+    alloced = normed * allocs
+    pos_vals = alloced.sum(axis=1)
+    daily_returns = pos_vals.pct_change().dropna()
 
-# Step 2: Compute daily returns
-def compute_daily_returns(prices):
-    return prices.pct_change().fillna(0)
-
-# Step 3: Portfolio value calculation
-def compute_portfolio_value(normalized_prices, allocations, start_val=1_000_000):
-    alloced = normalized_prices * allocations
-    position_values = alloced * start_val
-    portfolio_value = position_values.sum(axis=1)
-    return portfolio_value
-
-# Step 4: Objective function (negative Sharpe Ratio)
-def negative_sharpe_ratio(allocs, normalized_prices, rfr=0.0, sf=252.0):
-    portfolio_value = compute_portfolio_value(normalized_prices, allocs)
-    daily_returns = compute_daily_returns(portfolio_value)
-    excess_daily_returns = daily_returns - rfr / sf
-    sharpe_ratio = (excess_daily_returns.mean() / excess_daily_returns.std()) * np.sqrt(sf)
-    return -sharpe_ratio  # negate for minimization
-
-def optimize_portfolio(  		  	   		 	 	 			  		 			 	 	 		 		 	
-    sd=dt.datetime(2008, 1, 1),  		  	   		 	 	 			  		 			 	 	 		 		 	
-    ed=dt.datetime(2009, 1, 1),  		  	   		 	 	 			  		 			 	 	 		 		 	
-    syms=["GOOG", "AAPL", "GLD", "XOM"],  		  	   		 	 	 			  		 			 	 	 		 		 	
-    gen_plot=False,  		  	   		 	 	 			  		 			 	 	 		 		 	
-):  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    This function should find the optimal allocations for a given set of stocks. You should optimize for maximum Sharpe  		  	   		 	 	 			  		 			 	 	 		 		 	
-    Ratio. The function should accept as input a list of symbols as well as start and end dates and return a list of  		  	   		 	 	 			  		 			 	 	 		 		 	
-    floats (as a one-dimensional numpy array) that represents the allocations to each of the equities. You can take  		  	   		 	 	 			  		 			 	 	 		 		 	
-    advantage of routines developed in the optional assess portfolio project to compute daily portfolio value and  		  	   		 	 	 			  		 			 	 	 		 		 	
-    statistics.  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :param sd: A datetime object that represents the start date, defaults to 1/1/2008  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :type sd: datetime  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :param ed: A datetime object that represents the end date, defaults to 1/1/2009  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :type ed: datetime  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :param syms: A list of symbols that make up the portfolio (note that your code should support any  		  	   		 	 	 			  		 			 	 	 		 		 	
-        symbol in the data directory)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :type syms: list  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :param gen_plot: If True, optionally create a plot named plot.png. The autograder will always call your  		  	   		 	 	 			  		 			 	 	 		 		 	
-        code with gen_plot = False.  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :type gen_plot: bool  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :return: A tuple containing the portfolio allocations, cumulative return, average daily returns,  		  	   		 	 	 			  		 			 	 	 		 		 	
-        standard deviation of daily returns, and Sharpe ratio  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :rtype: tuple  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # Read in adjusted closing prices for given symbols, date range  		  	   		 	 	 			  		 			 	 	 		 		 	
-    dates = pd.date_range(sd, ed)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    prices_all = get_data(syms, dates)  # automatically adds SPY
-    prices_all.ffill(inplace=True)
-    prices_all.bfill(inplace=True)
-
-
-    prices = prices_all[syms]  # only portfolio symbols  		  	   		 	 	 			  		 			 	 	 		 		 	
-    prices_SPY = prices_all["SPY"]  # only SPY, for comparison later 
-    normalized_prices = normalize_prices(prices)
-    normalized_SPY = normalize_prices(prices_SPY) 		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # find the allocations for the optimal portfolio  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # note that the values here ARE NOT meant to be correct for a test case  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # allocs = np.asarray(  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     [0.2, 0.2, 0.3, 0.3]  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # )  # add code here to find the allocations  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # cr, adr, sddr, sr = [  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     0.25,  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     0.001,  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     0.0005,  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     2.1,  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # ]  # add code here to compute stats  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # # Get daily portfolio value  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # port_val = prices_SPY  # add code here to compute daily portfolio values  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # # Compare daily portfolio value with SPY using a normalized plot  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # if gen_plot:  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     # add code to plot here  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     df_temp = pd.concat(  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #         [port_val, prices_SPY], keys=["Portfolio", "SPY"], axis=1  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     )  		  	   		 	 	 			  		 			 	 	 		 		 	
-    #     pass  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # return allocs, cr, adr, sddr, sr  
-    num_assets = len(syms)
-    initial_guess = np.ones(num_assets) / num_assets
-    bounds = [(0.0, 1.0) for _ in range(num_assets)]
-    constraints = {'type': 'eq', 'fun': lambda x: np.sum(x) - 1}
-
-    result = spo.minimize(negative_sharpe_ratio, initial_guess,
-                          args=(normalized_prices,),
-                          method='SLSQP', bounds=bounds,
-                          constraints=constraints, options={'disp': False})
-
-    allocs = result.x
-    port_val = compute_portfolio_value(normalized_prices, allocs)
-    daily_returns = compute_daily_returns(port_val)
-
-    # Step 5.3: Performance metrics
-    cr = (port_val[-1] / port_val[0]) - 1
+    cr = (pos_vals[-1] / pos_vals[0]) - 1
     adr = daily_returns.mean()
     sddr = daily_returns.std()
     sr = (adr / sddr) * np.sqrt(252)
 
-    # Step 5.4: Plotting
-    if gen_plot:
-        df_temp = pd.concat([port_val / port_val.iloc[0],
-                             normalized_SPY], axis=1)
-        df_temp.columns = ['Portfolio', 'SPY']
-        df_temp.plot(title="Daily Portfolio Value vs. SPY", fontsize=10)
-        plt.xlabel("Date")
-        plt.ylabel("Normalized Price")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig('Figure1.png')
-        plt.show()
+    return cr, adr, sddr, sr
 
-    return allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
+
+def negative_sharpe_ratio(allocs, prices):
+    _, _, _, sr = get_portfolio_stats(prices, allocs)
+    return -sr
+
+
+def constraint_sum_to_one(allocs):
+    return np.sum(allocs) - 1
+
+
+def optimize_portfolio(sd, ed, syms, gen_plot=False):
+    dates = pd.date_range(sd, ed)
+    prices_all = get_data(syms + ['SPY'], dates)
+    prices_all = prices_all.fillna(method='ffill').fillna(method='bfill')
+
+    prices = prices_all[syms]
+    prices_SPY = prices_all['SPY']
+
+    num_assets = len(syms)
+    allocs_init = np.ones(num_assets) / num_assets
+    bounds = tuple((0, 1) for _ in range(num_assets))
+    constraints = {'type': 'eq', 'fun': constraint_sum_to_one}
+
+    result = minimize(
+        negative_sharpe_ratio,
+        allocs_init,
+        args=(prices,),
+        method='SLSQP',
+        bounds=bounds,
+        constraints=constraints
+    )
+
+    optimized_allocs = result.x
+    cr, adr, sddr, sr = get_portfolio_stats(prices, optimized_allocs)
+
+    if gen_plot:
+        normed_portfolio = (prices / prices.iloc[0]).mul(optimized_allocs, axis=1).sum(axis=1)
+        normed_SPY = prices_SPY / prices_SPY.iloc[0]
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(normed_portfolio, label='Optimized Portfolio', color='blue')
+        plt.plot(normed_SPY, label='SPY', color='red')
+        plt.title('Daily Portfolio Value vs. SPY')
+        plt.xlabel('Date')
+        plt.ylabel('Normalized Price')
+        plt.legend()
+        plt.grid()
+        plt.savefig('Figure1.png')
+
+    return optimized_allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -199,30 +142,6 @@ def test_code():
     print(f"Volatility (stdev of daily returns): {sddr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(f"Average Daily Return: {adr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
     print(f"Cumulative Return: {cr}")  		  	   		 	 	 			  		 			 	 	 		 		 	
-
-
-    # Plotting the optimized portfolio vs SPY
-    prices_all = get_data(symbols + ["SPY"], pd.date_range(start_date, end_date))
-    prices = prices_all[symbols]
-    prices_SPY = prices_all["SPY"]
-
-    normed_prices = normalize_prices(prices)
-    port_val = compute_portfolio_value(normed_prices, allocations)
-
-    # Normalize SPY for comparison
-    normed_SPY = normalize_prices(prices_SPY)
-
-    # Plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(port_val, label='Optimized Portfolio')
-    plt.plot(normed_SPY, label='SPY')
-    plt.title("Optimized Portfolio vs SPY")
-    plt.xlabel("Date")
-    plt.ylabel("Normalized Price")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
   		  	   		 	 	 			  		 			 	 	 		 		 	
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
     # This code WILL NOT be called by the auto grader  		  	   		 	 	 			  		 			 	 	 		 		 	
