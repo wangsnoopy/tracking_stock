@@ -54,9 +54,9 @@ def study_group():
 # This is the function that will be tested by the autograder  		  	   		 	 	 			  		 			 	 	 		 		 	
 # The student must update this code to properly implement the functionality  	
 # #################################################################################### #	  	   		 	 	 			  		 			 	 	 		 		 	
-def get_portfolio_stats(prices, allocs):
+def get_portfolio(prices, allocations):
     normed = prices / prices.iloc[0]
-    alloced = normed * allocs
+    alloced = normed * allocations
     pos_vals = alloced.sum(axis=1)
     daily_returns = pos_vals.pct_change().dropna()
 
@@ -69,7 +69,7 @@ def get_portfolio_stats(prices, allocs):
 
 
 def negative_sharpe_ratio(allocs, prices):
-    _, _, _, sr = get_portfolio_stats(prices, allocs)
+    _, _, _, sr = get_portfolio(prices, allocs)
     return -sr
 
 
@@ -100,7 +100,7 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
     )
 
     optimized_allocs = result.x
-    cr, adr, sddr, sr = get_portfolio_stats(prices, optimized_allocs)
+    cr, adr, sddr, sr = get_portfolio(prices, optimized_allocs)
 
     if gen_plot:
         normed_portfolio = (prices / prices.iloc[0]).mul(optimized_allocs, axis=1).sum(axis=1)
@@ -115,7 +115,7 @@ def optimize_portfolio(sd, ed, syms, gen_plot=False):
         plt.xlabel('Date')
         plt.ylabel('Normalized Price')
         plt.legend()
-        plt.savefig('plot.png')
+        plt.savefig('Figure1.png')
 
     return optimized_allocs, cr, adr, sddr, sr		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
