@@ -2,7 +2,7 @@ import numpy as np
 import BagLearner as bl
 import LinRegLearner as lrl
 
-class BagLearner(object):
+class InsaneLearner(object):
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.learners=[bl.BagLearner(learner=lrl.LinRegLearner,kwargs={},bags=20,boost=False,verbose=verbose) for i in range(20)]
