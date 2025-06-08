@@ -1,20 +1,6 @@
 """"""
 """ 			  		 			 	 	 		 		 	
 terminal:
-DTLearner (leaf_size=1): In-sample Corr: 0.4993, Out-of-sample Corr: 0.5408
-DTLearner (leaf_size=50): In-sample Corr: 0.5194, Out-of-sample Corr: 0.5804
-^CTraceback (most recent call last):
-  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/testlearner.py", line 102, in <module>
-    metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
-  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/testlearner.py", line 40, in evaluate_learner
-    pred_y_train = learner.query(train_x)
-  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/BagLearner.py", line 41, in query
-    predictions = np.array([learner.query(points) for learner in self.learners])
-  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/BagLearner.py", line 41, in <listcomp>
-    predictions = np.array([learner.query(points) for learner in self.learners])
-  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/DTLearner.py", line 39, in query
-    while self.tree[node_idx, 0] != -1:
-KeyboardInterrupt
 
 Test a learner.  (c) 2015 Tucker Balch  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -72,6 +58,9 @@ if __name__ == "__main__":
         print("Usage: python testlearner.py <filename>")
         sys.exit(1)
     
+    total_start = time.time()
+    print("Starting testlearner.py")
+    
     # Read and split data
     np.random.seed(123456789)  # Replace with your GT ID
     data = np.genfromtxt(sys.argv[1], delimiter=',', skip_header=1)[:, 1:]  # Skip date column
@@ -81,21 +70,23 @@ if __name__ == "__main__":
     test_x, test_y = data[train_rows:, :-1], data[train_rows:, -1]
     
     # Experiment 1: Overfitting with DTLearner
-    leaf_sizes = list(range(1, 51))
+    exp1_start = time.time()
+    print("Running Experiment 1...")
+    leaf_sizes = [1, 5, 10, 20, 50]
     rmse_train, rmse_test, corr_train, corr_test = [], [], [], []
     with open("p3_results.txt", "w") as f:
         f.write("Experiment 1: DTLearner Overfitting\n")
         f.write("Leaf Size, In-sample RMSE, Out-of-sample RMSE, In-sample Corr, Out-of-sample Corr\n")
         for ls in leaf_sizes:
-            learner = dt.DTLearner(leaf_size=ls, verbose=False)
+            learner = dt.DTLearner(leaf_size=ls, verbose=True)
             metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
             rmse_train.append(metrics[0])
             rmse_test.append(metrics[1])
             corr_train.append(metrics[4])
             corr_test.append(metrics[5])
             f.write(f"{ls},{metrics[0]:.4f},{metrics[1]:.4f},{metrics[4]:.4f},{metrics[5]:.4f}\n")
-            if ls == 1 or ls == 50:
-                print(f"DTLearner (leaf_size={ls}): In-sample Corr: {metrics[4]:.4f}, Out-of-sample Corr: {metrics[5]:.4f}")
+            print(f"DTLearner (leaf_size={ls}): In-sample Corr: {metrics[4]:.4f}, Out-of-sample Corr: {metrics[5]:.4f}")
+    print(f"Experiment 1 completed in {time.time() - exp1_start:.2f} seconds")
     
     plt.figure(figsize=(10, 5))
     plt.plot(leaf_sizes, rmse_train, label='In-sample RMSE')
@@ -109,16 +100,20 @@ if __name__ == "__main__":
     plt.close()
     
     # Experiment 2: Bagging with BagLearner
+    exp2_start = time.time()
+    print("Running Experiment 2...")
     rmse_train_bag, rmse_test_bag = [], []
     with open("p3_results.txt", "a") as f:
         f.write("\nExperiment 2: BagLearner with DTLearner\n")
         f.write("Leaf Size, In-sample RMSE, Out-of-sample RMSE\n")
         for ls in leaf_sizes:
-            learner = bl.BagLearner(learner=dt.DTLearner, kwargs={"leaf_size": ls}, bags=20, boost=False, verbose=False)
+            print(f"Training BagLearner with leaf_size={ls}")
+            learner = bl.BagLearner(learner=dt.DTLearner, kwargs={"leaf_size": ls}, bags=5, boost=False, verbose=True)
             metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
             rmse_train_bag.append(metrics[0])
             rmse_test_bag.append(metrics[1])
             f.write(f"{ls},{metrics[0]:.4f},{metrics[1]:.4f}\n")
+    print(f"Experiment 2 completed in {time.time() - exp2_start:.2f} seconds")
     
     plt.figure(figsize=(10, 5))
     plt.plot(leaf_sizes, rmse_train_bag, label='In-sample RMSE')
@@ -132,7 +127,9 @@ if __name__ == "__main__":
     plt.close()
     
     # Experiment 3: DTLearner vs. RTLearner
-    num_trials = 50
+    exp3_start = time.time()
+    print("Running Experiment 3...")
+    num_trials = 10
     leaf_size = 30
     dt_mae, rt_mae, dt_times, rt_times = [], [], [], []
     with open("p3_results.txt", "a") as f:
@@ -143,8 +140,8 @@ if __name__ == "__main__":
             train_x, train_y = data[:train_rows, :-1], data[:train_rows, -1]
             test_x, test_y = data[train_rows:, :-1], data[train_rows:, -1]
             
-            dt_learner = dt.DTLearner(leaf_size=leaf_size, verbose=False)
-            rt_learner = rt.RTLearner(leaf_size=leaf_size, verbose=False)
+            dt_learner = dt.DTLearner(leaf_size=leaf_size, verbose=True)
+            rt_learner = rt.RTLearner(leaf_size=leaf_size, verbose=True)
             dt_metrics = evaluate_learner(dt_learner, train_x, train_y, test_x, test_y)
             rt_metrics = evaluate_learner(rt_learner, train_x, train_y, test_x, test_y)
             
@@ -153,6 +150,7 @@ if __name__ == "__main__":
             dt_times.append(dt_metrics[6])
             rt_times.append(rt_metrics[6])
             f.write(f"{i+1},{dt_metrics[3]:.4f},{rt_metrics[3]:.4f},{dt_metrics[6]:.4f},{rt_metrics[6]:.4f}\n")
+    print(f"Experiment 3 completed in {time.time() - exp3_start:.2f} seconds")
     
     plt.figure(figsize=(10, 5))
     plt.plot(range(1, num_trials+1), dt_mae, label='DTLearner MAE')
@@ -177,9 +175,14 @@ if __name__ == "__main__":
     plt.close()
     
     # Test InsaneLearner
+    insane_start = time.time()
+    print("Running InsaneLearner...")
     with open("p3_results.txt", "a") as f:
         f.write("\nInsaneLearner Results\n")
         f.write("In-sample RMSE, Out-of-sample RMSE, In-sample Corr, Out-of-sample Corr\n")
-        learner = il.InsaneLearner(verbose=False)
+        learner = il.InsaneLearner(verbose=True)
         metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
         f.write(f"{metrics[0]:.4f},{metrics[1]:.4f},{metrics[4]:.4f},{metrics[5]:.4f}\n")
+    print(f"InsaneLearner completed in {time.time() - insane_start:.2f} seconds")
+    
+    print(f"Total runtime: {time.time() - total_start:.2f} seconds")
