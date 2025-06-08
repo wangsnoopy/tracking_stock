@@ -1,5 +1,13 @@
-""""""  		  	   		 	 	 			  		 			 	 	 		 		 	
-"""  		  	   		 	 	 			  		 			 	 	 		 		 	
+""""""
+"""
+
+error:
+Traceback (most recent call last):
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/testlearner.py", line 73, in <module>
+    corr_test.append(metrics[5])
+IndexError: tuple index out of range
+
+  		  	   		 	 	 			  		 			 	 	 		 		 	
 Test a learner.  (c) 2015 Tucker Balch  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 Copyright 2018, Georgia Institute of Technology (Georgia Tech)  		  	   		 	 	 			  		 			 	 	 		 		 	
