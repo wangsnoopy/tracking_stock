@@ -1,5 +1,21 @@
 """"""
 """ 			  		 			 	 	 		 		 	
+terminal:
+DTLearner (leaf_size=1): In-sample Corr: 0.4993, Out-of-sample Corr: 0.5408
+DTLearner (leaf_size=50): In-sample Corr: 0.5194, Out-of-sample Corr: 0.5804
+^CTraceback (most recent call last):
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/testlearner.py", line 102, in <module>
+    metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/testlearner.py", line 40, in evaluate_learner
+    pred_y_train = learner.query(train_x)
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/BagLearner.py", line 41, in query
+    predictions = np.array([learner.query(points) for learner in self.learners])
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/BagLearner.py", line 41, in <listcomp>
+    predictions = np.array([learner.query(points) for learner in self.learners])
+  File "/Users/awang/Documents/ML4T_2025Summer/assess_learners/DTLearner.py", line 39, in query
+    while self.tree[node_idx, 0] != -1:
+KeyboardInterrupt
+
 Test a learner.  (c) 2015 Tucker Balch  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 Copyright 2018, Georgia Institute of Technology (Georgia Tech)  		  	   		 	 	 			  		 			 	 	 		 		 	
