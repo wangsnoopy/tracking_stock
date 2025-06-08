@@ -42,32 +42,52 @@ import BagLearner as bl
 import InsaneLearner as it 		  	   		 	 	 			  		 			 	 	 		 		 	
 
 def evaluate_learner(learner, train_x, train_y, test_x, test_y):
+    print(f"Evaluating learner with leaf_size={getattr(learner, 'leaf_size', 'N/A')}")
+    print(f"train_x shape: {train_x.shape}, train_y shape: {train_y.shape}")
+    print(f"test_x shape: {test_x.shape}, test_y shape: {test_y.shape}")
+    
     start = time.time()
     learner.add_evidence(train_x, train_y)
     train_time = time.time() - start
+    
     pred_y_train = learner.query(train_x)
-    rmse_train = math.sqrt(((train_y - pred_y_train) ** 2).mean())
-    corr_train = np.corrcoef(pred_y_train, train_y)[0, 1]
     pred_y_test = learner.query(test_x)
+    
+    print(f"pred_y_train shape: {pred_y_train.shape}, values: {pred_y_train[:5]}")
+    print(f"pred_y_test shape: {pred_y_test.shape}, values: {pred_y_test[:5]}")
+    
+    rmse_train = math.sqrt(((train_y - pred_y_train) ** 2).mean())
     rmse_test = math.sqrt(((test_y - pred_y_test) ** 2).mean())
-    corr_test = np.corrcoef(pred_y_test, test_y)[0, 1]
-    return rmse_train, corr_train, rmse_test, corr_test, train_time
- 	   		 	 	 			  		 			 	 	 		 		 	
+    mae_train = np.abs(train_y - pred_y_train).mean()
+    mae_test = np.abs(test_y - pred_y_test).mean()
+    
+    # Handle NaN in correlations
+    corr_train = np.corrcoef(pred_y_train, train_y)[0, 1] if np.std(pred_y_train) > 0 and np.std(train_y) > 0 else 0.0
+    corr_test = np.corrcoef(pred_y_test, test_y)[0, 1] if np.std(pred_y_test) > 0 and np.std(test_y) > 0 else 0.0
+    if np.isnan(corr_train):
+        corr_train = 0.0
+    if np.isnan(corr_test):
+        corr_test = 0.0
+    
+    return rmse_train, rmse_test, mae_train, mae_test, corr_train, corr_test, train_time
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python testlearner.py <filename>")
         sys.exit(1)
-
+    
     # Read and split data
-    np.random.seed(904081341)  # Replace with your GT ID
+    np.random.seed(123456789)  # Replace with your GT ID
+    print("Loading data...")
     data = np.genfromtxt(sys.argv[1], delimiter=',', skip_header=1)[:, 1:]  # Skip date column
+    print(f"Data shape: {data.shape}")
     np.random.shuffle(data)
     train_rows = int(0.6 * data.shape[0])
     train_x, train_y = data[:train_rows, :-1], data[:train_rows, -1]
     test_x, test_y = data[train_rows:, :-1], data[train_rows:, -1]
     
     # Experiment 1: Overfitting with DTLearner
-    leaf_sizes = list(range(1, 21))
+    leaf_sizes = list(range(1, 11))  # Reduced for debugging
     rmse_train, rmse_test, corr_train, corr_test = [], [], [], []
     with open("p3_results.txt", "w") as f:
         f.write("Experiment 1: DTLearner Overfitting\n")
@@ -82,7 +102,7 @@ if __name__ == "__main__":
             f.write(f"{ls},{metrics[0]:.4f},{metrics[1]:.4f},{metrics[4]:.4f},{metrics[5]:.4f}\n")
             if ls == 1:
                 print(f"DTLearner (leaf_size=1): In-sample Corr: {metrics[4]:.4f}, Out-of-sample Corr: {metrics[5]:.4f}")
-            if ls == 50 or ls == max(leaf_sizes):
+            if ls == 10:  # Check at max leaf_size
                 print(f"DTLearner (leaf_size={ls}): In-sample Corr: {metrics[4]:.4f}")
     
     plt.figure(figsize=(10, 5))
