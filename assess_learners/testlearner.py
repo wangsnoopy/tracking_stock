@@ -49,88 +49,87 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python testlearner.py <filename>")
         sys.exit(1)
-    data = np.genfromtxt(sys.argv[1], delimiter=',', skip_header=1)
+
+    # Read and split data
+    np.random.seed(904081341)  # Replace with your GT ID
+    data = np.genfromtxt(sys.argv[1], delimiter=',', skip_header=1)[:, 1:]  # Skip date column
     np.random.shuffle(data)
     train_rows = int(0.6 * data.shape[0])
     train_x, train_y = data[:train_rows, :-1], data[:train_rows, -1]
     test_x, test_y = data[train_rows:, :-1], data[train_rows:, -1]
     
-    # Baseline learners
-    learners = [
-        ("DTLearner", dt.DTLearner(leaf_size=1)),
-        ("RTLearner", rt.RTLearner(leaf_size=1)),
-        ("BagLearner", bl.BagLearner(learner=rt.RTLearner, kwargs={"leaf_size": 1}, bags=20)),
-        ("InsaneLearner", it.InsaneLearner())
-    ]
-    results = []
-    for name, learner in learners:
-        metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
-        results.append((name, *metrics))
+    # Experiment 1: Overfitting with DTLearner
+    leaf_sizes = list(range(1, 21))
+    rmse_train, rmse_test, corr_train, corr_test = [], [], [], []
+    with open("p3_results.txt", "w") as f:
+        f.write("Experiment 1: DTLearner Overfitting\n")
+        f.write("Leaf Size, In-sample RMSE, Out-of-sample RMSE, In-sample Corr, Out-of-sample Corr\n")
+        for ls in leaf_sizes:
+            learner = dt.DTLearner(leaf_size=ls, verbose=True)
+            metrics = evaluate_learner(learner, train_x, train_y, test_x, test_y)
+            rmse_train.append(metrics[0])
+            rmse_test.append(metrics[1])
+            corr_train.append(metrics[4])
+            corr_test.append(metrics[5])
+            f.write(f"{ls},{metrics[0]:.4f},{metrics[1]:.4f},{metrics[4]:.4f},{metrics[5]:.4f}\n")
+            if ls == 1:
+                print(f"DTLearner (leaf_size=1): In-sample Corr: {metrics[4]:.4f}, Out-of-sample Corr: {metrics[5]:.4f}")
+            if ls == 50 or ls == max(leaf_sizes):
+                print(f"DTLearner (leaf_size={ls}): In-sample Corr: {metrics[4]:.4f}")
     
-    # Leaf size experiment
-    leaf_sizes = [1, 5, 10, 20, 50]
-    dt_rmse_train, dt_rmse_test, dt_times = [], [], []
-    rt_rmse_train, rt_rmse_test, rt_times = [], [], []
-    for ls in leaf_sizes:
-        dt_metrics = evaluate_learner(dt.DTLearner(leaf_size=ls), train_x, train_y, test_x, test_y)
-        rt_metrics = evaluate_learner(rt.RTLearner(leaf_size=ls), train_x, train_y, test_x, test_y)
-        dt_rmse_train.append(dt_metrics[0]); dt_rmse_test.append(dt_metrics[2]); dt_times.append(dt_metrics[4])
-        rt_rmse_train.append(rt_metrics[0]); rt_rmse_test.append(rt_metrics[2]); rt_times.append(rt_metrics[4])
-    
-    # Bag size experiment
-    bag_sizes = [1, 5, 10, 20, 50]
-    bag_rmse_train, bag_rmse_test, bag_times = [], [], []
-    for bags in bag_sizes:
-        metrics = evaluate_learner(bl.BagLearner(learner=rt.RTLearner, kwargs={"leaf_size": 1}, bags=bags), train_x, train_y, test_x, test_y)
-        bag_rmse_train.append(metrics[0]); bag_rmse_test.append(metrics[2]); bag_times.append(metrics[4])
-    
-    # Print results
-    print("\nBaseline Learner Results:")
-    for name, rmse_train, corr_train, rmse_test, corr_test, train_time in results:
-        print(f"{name}:")
-        print(f"  In-sample RMSE: {rmse_train:.4f}, Corr: {corr_train:.4f}")
-        print(f"  Out-of-sample RMSE: {rmse_test:.4f}, Corr: {corr_test:.4f}")
-        print(f"  Training time: {train_time:.4f} seconds")
-    
-    # Plot leaf size experiment
     plt.figure(figsize=(10, 5))
-    plt.plot(leaf_sizes, dt_rmse_train, label='DTLearner In-sample')
-    plt.plot(leaf_sizes, dt_rmse_test, label='DTLearner Out-of-sample')
-    plt.plot(leaf_sizes, rt_rmse_train, label='RTLearner In-sample')
-    plt.plot(leaf_sizes, rt_rmse_test, label='RTLearner Out-of-sample')
+    plt.plot(leaf_sizes, rmse_train, label='In-sample RMSE')
+    plt.plot(leaf_sizes, rmse_test, label='Out-of-sample RMSE')
     plt.xlabel('Leaf Size')
     plt.ylabel('RMSE')
-    plt.title('RMSE vs. Leaf Size')
+    plt.title('Experiment 1: DTLearner RMSE vs. Leaf Size')
     plt.legend()
     plt.grid(True)
-    plt.show()
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(leaf_sizes, dt_times, label='DTLearner')
-    plt.plot(leaf_sizes, rt_times, label='RTLearner')
-    plt.xlabel('Leaf Size')
-    plt.ylabel('Training Time (s)')
-    plt.title('Training Time vs. Leaf Size')
-    plt.legend(); 
-    plt.grid(True)
-    plt.show()
+    plt.savefig('experiment_1_rmse.png')
+    plt.close()
     
-    # Plot bag size experiment
+    # Experiment 3: DTLearner vs. RTLearner
+    num_trials = 10
+    leaf_size = 30
+    dt_mae, rt_mae, dt_times, rt_times = [], [], [], []
+    with open("p3_results.txt", "a") as f:
+        f.write("\nExperiment 3: DTLearner vs. RTLearner\n")
+        f.write("Trial, DTLearner MAE, RTLearner MAE, DTLearner Time, RTLearner Time\n")
+        for i in range(num_trials):
+            # Reshuffle data for each trial
+            np.random.shuffle(data)
+            train_x, train_y = data[:train_rows, :-1], data[:train_rows, -1]
+            test_x, test_y = data[train_rows:, :-1], data[train_rows:, -1]
+            
+            dt_learner = dt.DTLearner(leaf_size=leaf_size, verbose=True)
+            rt_learner = rt.RTLearner(leaf_size=leaf_size, verbose=True)
+            dt_metrics = evaluate_learner(dt_learner, train_x, train_y, test_x, test_y)
+            rt_metrics = evaluate_learner(rt_learner, train_x, train_y, test_x, test_y)
+            
+            dt_mae.append(dt_metrics[3])
+            rt_mae.append(rt_metrics[3])
+            dt_times.append(dt_metrics[6])
+            rt_times.append(rt_metrics[6])
+            f.write(f"{i+1},{dt_metrics[3]:.4f},{rt_metrics[3]:.4f},{dt_metrics[6]:.4f},{rt_metrics[6]:.4f}\n")
+    
     plt.figure(figsize=(10, 5))
-    plt.plot(bag_sizes, bag_rmse_train, label='In-sample')
-    plt.plot(bag_sizes, bag_rmse_test, label='Out-of-sample')
-    plt.xlabel('Number of Bags')
-    plt.ylabel('RMSE')
-    plt.title('RMSE vs. Bag Size')
+    plt.plot(range(1, num_trials+1), dt_mae, label='DTLearner MAE')
+    plt.plot(range(1, num_trials+1), rt_mae, label='RTLearner MAE')
+    plt.xlabel('Trial')
+    plt.ylabel('Mean Absolute Error')
+    plt.title('Experiment 3: DTLearner vs. RTLearner MAE')
     plt.legend()
     plt.grid(True)
-    plt.show()
-
+    plt.savefig('experiment_3_mae.png')
+    plt.close()
+    
     plt.figure(figsize=(10, 5))
-    plt.plot(bag_sizes, bag_times, label='BagLearner')
-    plt.xlabel('Number of Bags')
-    plt.ylabel('Training Time (s)')
-    plt.title('Training Time vs. Bag Size')
+    plt.plot(range(1, num_trials+1), dt_times, label='DTLearner Training Time')
+    plt.plot(range(1, num_trials+1), rt_times, label='RTLearner Training Time')
+    plt.xlabel('Trial')
+    plt.ylabel('Training Time (seconds)')
+    plt.title('Experiment 3: DTLearner vs. RTLearner Training Time')
     plt.legend()
     plt.grid(True)
-    plt.show()		  	   		 	 	 			  		 			 	 	 		 		 	
+    plt.savefig('experiment_3_time.png')
+    plt.close()
