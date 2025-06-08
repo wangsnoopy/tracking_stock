@@ -1,13 +1,14 @@
 import numpy as np
+import random
 
 class BagLearner(object):
-    def __init__(self, learner, kwargs={}, bags=20, boost=False, verbose=False):
+    def __init__(self, learner, kwargs, bags = 10, boost = True, verbose = True):
+        self.verbose = verbose
+        self.boost = boost
+        self.bags = bags
         self.learner = learner
         self.kwargs = kwargs
-        self.bags = bags
-        self.boost = boost
-        self.verbose = verbose
-        self.learners = []
+        self.baglist = []
 
     def author(self):
         return "awang758"
@@ -17,33 +18,50 @@ class BagLearner(object):
 
     def add_evidence(self, data_x, data_y):
         """
-        Add training data to learner using bootstrap aggregation
+        Add training data to learner
+
+        :param data_x: A set of feature values used to train the learner
+        :type data_x: numpy.ndarray
+        :param data_y: The value we are attempting to predict given the X data
+        :type data_y: numpy.ndarray
         """
-        self.learners = []
-        n_samples = data_x.shape[0]
-        
-        for i in range(self.bags):
-            # Create new learner instance
-            learner = self.learner(**self.kwargs)
-            
-            # Bootstrap sample with replacement
-            indices = np.random.choice(n_samples, size=n_samples, replace=True)
-            sample_x = data_x[indices]
-            sample_y = data_y[indices]
-            
-            # Train learner on bootstrap sample
-            learner.add_evidence(sample_x, sample_y)
-            self.learners.append(learner)
+        data = np.column_stack([data_x, data_y]) #column stack is used because concatenate or append somehow doesn't work
+
+        learnersaver = []
+        #generate bags:
+        for i in range(0, self.bags):
+            thislearner = self.learner(**self.kwargs)
+            thisindex = self.genindex(data)
+            bagx = data_x[thisindex]
+            bagy = data_y[thisindex]
+            thislearner.add_evidence(bagx, bagy) # call the add evidence function in their own class, not this class
+            self.baglist.append(thislearner)
+
+        if self.verbose == True:
+            print("bag number:\n", self.bags)
+        return self.baglist
+
+
+    def genindex(self, data):
+        self.data = data
+        indexlist = []
+        bag_rows = int(data.shape[0])
+        for i in range (0, bag_rows):
+            indexlist.append(random.randint(0, data.shape[0] - 1))
+        return indexlist
 
     def query(self, points):
         """
         Estimate a set of test points given the model we built.
+
+        :param points: A numpy array with each row corresponding to a specific query.
+        :type points: numpy.ndarray
+        :return: The predicted result of the input data according to the trained model
+        :rtype: numpy.ndarray
         """
-        predictions = np.zeros((self.bags, points.shape[0]))
-        
-        # Get predictions from all learners
-        for i, learner in enumerate(self.learners):
-            predictions[i] = learner.query(points)
-        
-        # Return average of all predictions
-        return np.mean(predictions, axis=0)
+        Y = np.empty((points.shape[0], 1))
+        for i in self.baglist:
+            Y = np.append(Y, np.array([i.query(points)]).T, axis=1)
+        Y_del = np.delete(Y, 0, 1)
+        pred_y = Y_del.mean(axis=1)
+        return pred_y

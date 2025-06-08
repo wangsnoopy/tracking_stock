@@ -4,7 +4,6 @@ class DTLearner(object):
     def __init__(self, leaf_size=1, verbose=False):
         self.leaf_size = leaf_size
         self.verbose = verbose
-        self.tree = None
 
     def author(self):
         return "awang758"
@@ -12,69 +11,91 @@ class DTLearner(object):
     def study_group(self):
         return "awang758"
 
+    def optfactor(self, data_x, data_y):
+        c = 0
+        factor = 0
+        for i in range(data_x.shape[1]):
+            if np.std(data_x[:, i]) ==0 or np.std(data_y) == 0:
+                factor = 0
+            else:
+                ci = abs(np.corrcoef(data_x[:, i], y=data_y))
+                if ci[0, 1] >= c:
+                    c = ci[0, 1]
+                    factor = i
+        return (factor)
+
+    def build_tree(self, data):
+        #termination condition: leaf size limitation or all y are equal
+        if data.shape[0] <= self.leaf_size or np.std(data[:, -1]) == 0:
+            c = np.empty((data.shape[0], 4))
+            c[:, 0] = -1
+            c[:, 1] = np.mean(data[:, -1])
+            c[:, 2:] = -100
+            return c
+
+        facter = self.optfactor(data[:, 0:-1], data[:, -1])
+        splitval = np.median(data[:, facter])
+        #judge if median could not divide tree any more
+        if np.all(data[:, facter] <= splitval):
+            c = np.array([[-1, np.mean(data[:, -1]), -100, -100]])
+            return c
+
+        #recursion starts here:
+        lefttree = self.build_tree(data[data[:, facter] <= splitval])
+        righttree = self.build_tree(data[data[:, facter] > splitval])
+        root = np.array(([facter, splitval, 1, lefttree.shape[0] + 1],))
+        c = np.concatenate((root, lefttree, righttree), axis=0)
+        return c
+
+
+
+
+
+
     def add_evidence(self, data_x, data_y):
         """
         Add training data to learner
+
+        :param data_x: A set of feature values used to train the learner
+        :type data_x: numpy.ndarray
+        :param data_y: The value we are attempting to predict given the X data
+        :type data_y: numpy.ndarray
         """
-        self.tree = self.build_tree(data_x, data_y)
+
+        # combine x and y to be introduced into trees
+        new_y = np.array(data_y, copy=False, subok=True, ndmin=2).T
+        data = np.column_stack([data_x, data_y]) #column stack is used because concatenate or append somehow doesn't work
+        self.tree = self.build_tree(data)
+        if self.verbose == True:
+            print("tree:\n", self.build_tree(data))
+            print("tree shape:\n", self.build_tree(data).shape)
+
+
+        # build and save the model
 
     def query(self, points):
         """
         Estimate a set of test points given the model we built.
+
+        :param points: A numpy array with each row corresponding to a specific query.
+        :type points: numpy.ndarray
+        :return: The predicted result of the input data according to the trained model
+        :rtype: numpy.ndarray
         """
-        pred = np.zeros(points.shape[0])
-        for i in range(points.shape[0]):
-            node_idx = 0
-            while self.tree[node_idx, 0] != -1:  # Not a leaf
-                feature = int(self.tree[node_idx, 0])
-                split_val = self.tree[node_idx, 1]
-                if points[i, feature] <= split_val:
-                    node_idx = int(self.tree[node_idx, 2])  # Left child
+        tree = self.tree
+
+        testy = np.array(())
+        for test in points:
+            treenode = 0
+            while int(tree[treenode, 0]) != -1:
+                facter = int(tree[treenode, 0])
+
+                if test[facter] <= tree[treenode, 1]:
+                    treenode = treenode + int(tree[treenode, 2])
                 else:
-                    node_idx = int(self.tree[node_idx, 3])  # Right child
-            pred[i] = self.tree[node_idx, 1]  # Leaf value
-        return pred
-
-    def build_tree(self, data_x, data_y):
-        """
-        Build decision tree recursively
-        """
-        # Base case: create leaf if conditions met
-        if data_x.shape[0] <= self.leaf_size or np.all(data_y == data_y[0]):
-            return np.array([[-1, np.mean(data_y), np.nan, np.nan]])
-
-        # Find best feature to split on (highest absolute correlation)
-        best_feature = self.get_best_feature(data_x, data_y)
-        split_val = np.median(data_x[:, best_feature])
-        
-        # Split data
-        left_mask = data_x[:, best_feature] <= split_val
-        right_mask = ~left_mask
-        
-        # If split doesn't separate data, make leaf
-        if np.sum(left_mask) == 0 or np.sum(right_mask) == 0:
-            return np.array([[-1, np.mean(data_y), np.nan, np.nan]])
-        
-        # Recursively build subtrees
-        left_tree = self.build_tree(data_x[left_mask], data_y[left_mask])
-        right_tree = self.build_tree(data_x[right_mask], data_y[right_mask])
-        
-        # Create root node
-        root = np.array([[best_feature, split_val, 1, 1 + left_tree.shape[0]]])
-        
-        # Combine root with subtrees
-        tree = np.vstack((root, left_tree, right_tree))
-        return tree
-
-    def get_best_feature(self, data_x, data_y):
-        """
-        Find feature with highest absolute correlation with target
-        """
-        correlations = np.zeros(data_x.shape[1])
-        for i in range(data_x.shape[1]):
-            if np.std(data_x[:, i]) == 0:
-                correlations[i] = 0
-            else:
-                corr = np.corrcoef(data_x[:, i], data_y)[0, 1]
-                correlations[i] = abs(corr) if not np.isnan(corr) else 0
-        return np.argmax(correlations)
+                    treenode = treenode + int(tree[treenode, 3])
+            # I have to write the following three-line shit because we are not allowed to use lists.
+            thisy = tree[treenode, 1]
+            thisy = np.array((thisy))
+            testy = np.append(testy, thisy)
+        return testy
