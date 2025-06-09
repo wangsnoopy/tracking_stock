@@ -45,7 +45,7 @@ def convert_to_float(value):
         return "no"
 
 # Add default argument for easier running
-sys.argv.append("Data/Istanbul.csv")
+# sys.argv.append("Data/Istanbul.csv")
 
 if __name__ == "__main__":
     np.random.seed(904081341)
