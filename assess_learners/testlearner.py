@@ -50,6 +50,9 @@ sys.argv.append("Data/Istanbul.csv")
 if __name__ == "__main__":
     np.random.seed(904081341)
 
+    if len(sys.argv) == 1:
+        sys.argv.append("Data/Istanbul.csv")
+
     if len(sys.argv) != 2:
         print("Usage: python testlearner.py <filename>")
         sys.exit(1)
