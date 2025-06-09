@@ -38,170 +38,128 @@ import InsaneLearner as it
 import time
 
 
-def converttype(a):
-    # convert the element to floeat, if the element is not convertable, throw error and return 'no'
+def convert_to_float(value):
     try:
-        return float(a)
+        return float(value)
     except ValueError:
         return "no"
 
-
+# Add default argument for easier running
 sys.argv.append("Data/Istanbul.csv")
+
 if __name__ == "__main__":
-    np.random.seed(596568372)
+    np.random.seed(904081341)
+
     if len(sys.argv) != 2:
         print("Usage: python testlearner.py <filename>")
         sys.exit(1)
-    inf = open(sys.argv[1], "r+")
-    rawdata = [list(s.strip().split(",")) for s in inf.readlines()]
-    # delete first line if full of strings
-    no = []
-    no2 = []
-    for i in range(len(rawdata[0])):
-        no.append('no')
-        no2.append(converttype(rawdata[0][i]))
-    if no == no2:
-        del rawdata[0]
-    # moniter datatype of first column, delete the column if it is string
-    for l in rawdata:
-        for s in l:
-            if converttype(s) == "no":
-                l.remove(s)
-    data = np.array(list(rawdata)).astype(np.float)
 
-    # compute how much of the data is training and testing
-    train_rows = int(0.6 * data.shape[0])
-    test_rows = data.shape[0] - train_rows
+    with open(sys.argv[1], "r") as file:
+        raw_lines = [line.strip().split(",") for line in file.readlines()]
 
-    # separate out training and testing data
-    train_x = data[:train_rows, 0:-1]
-    train_y = data[:train_rows, -1]
-    test_x = data[train_rows:, 0:-1]
-    test_y = data[train_rows:, -1]
+    # Check if first row contains strings
+    first_row_check = ['no'] * len(raw_lines[0])
+    converted_first_row = [convert_to_float(val) for val in raw_lines[0]]
+    if first_row_check == converted_first_row:
+        del raw_lines[0]
 
+    # Remove string-type columns if present
+    for row in raw_lines:
+        row[:] = [val for val in row if convert_to_float(val) != "no"]
 
-    dtrmse = []
+    # Convert to NumPy array
+    data = np.array(raw_lines, dtype=float)
 
-    for i in range(1, 51):
+    # Split data
+    total_rows = data.shape[0]
+    train_size = int(0.6 * total_rows)
+    x_train = data[:train_size, :-1]
+    y_train = data[:train_size, -1]
+    x_test = data[train_size:, :-1]
+    y_test = data[train_size:, -1]
 
-        # create a learner and train it
-        learner = dt.DTLearner(verbose=False, leaf_size=i)  # create a Learner
-        learner.add_evidence(train_x, train_y) # train it
-        # evaluate in sample
-        pred_y = learner.query(train_x)  # get the predictions
-        rmse_train = math.sqrt(((train_y - pred_y) ** 2).sum() / train_y.shape[0])
-        c_train = np.corrcoef(pred_y, y=train_y)
-        # evaluate out of sample
-        pred_y = learner.query(test_x)  # get the predictions
-        rmse_test = math.sqrt(((test_y - pred_y) ** 2).sum() / test_y.shape[0])
-        c_test = np.corrcoef(pred_y, y=test_y)
-        dtrmse.append([rmse_train, rmse_test])
-    nd_dtrmse = np.array(dtrmse)
-    df1 = pd.DataFrame(nd_dtrmse, index=range(1, 51), columns=['training data', 'testing data'])
-    #print(df1)
+    # ---------- DT Experiments ----------
+    dt_rmse_list = []
+    for leaf in range(1, 51):
+        model_dt = dt.DTLearner(leaf_size=leaf, verbose=False)
+        model_dt.add_evidence(x_train, y_train)
 
-    #plot leaf_size vs rmse in dt cases
-    ax = df1.plot(title='Effect of leaf size on dt learner', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Root mean square error')
-    plt.savefig('Figure1.png')
-    plt.close()
-    #experiment 2 figure
-    dtrmse2 = []
-    for leaf_size in range(1, 51):
-        learner2 = bl.BagLearner(dt.DTLearner, bags=5, kwargs={'leaf_size': leaf_size},boost=True, verbose=False)
-        learner2.add_evidence(train_x, train_y)  # train it
-        # evaluate in sample
-        pred_y = learner2.query(train_x)  # get the predictions
-        rmse_train = math.sqrt(((train_y - pred_y) ** 2).sum() / train_y.shape[0])
-        # evaluate out of sample
-        pred_y = learner2.query(test_x)  # get the predictions
-        rmse_test = math.sqrt(((test_y - pred_y) ** 2).sum() / test_y.shape[0])
-        dtrmse2.append([rmse_train, rmse_test])
-    nd_dtrmse2 = np.array(dtrmse2)
-    df2 = pd.DataFrame(nd_dtrmse2, index=range(1, 51), columns=['training data', 'testing data'])
-    ax = df2.plot(title='5-bag case on dt learner', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Root mean square error')
-    plt.savefig('Figure2-1.png')
+        pred_train = model_dt.query(x_train)
+        rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
+
+        pred_test = model_dt.query(x_test)
+        rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
+
+        dt_rmse_list.append([rmse_train, rmse_test])
+
+    df_dt = pd.DataFrame(dt_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
+    ax = df_dt.plot(title="Effect of leaf size on dt learner")
+    ax.set_xlabel("Leaf size")
+    ax.set_ylabel("Root mean square error")
+    plt.savefig("Figure1.png")
     plt.close()
 
-    dtrmse2 = []
-    for leaf_size in range(1, 51):
-        learner2 = bl.BagLearner(dt.DTLearner, bags=20, kwargs={'leaf_size': leaf_size}, boost=True, verbose=False)
-        learner2.add_evidence(train_x, train_y)  # train it
-        # evaluate in sample
-        pred_y = learner2.query(train_x)  # get the predictions
-        rmse_train = math.sqrt(((train_y - pred_y) ** 2).sum() / train_y.shape[0])
-        # evaluate out of sample
-        pred_y = learner2.query(test_x)  # get the predictions
-        rmse_test = math.sqrt(((test_y - pred_y) ** 2).sum() / test_y.shape[0])
-        dtrmse2.append([rmse_train, rmse_test])
-    nd_dtrmse2 = np.array(dtrmse2)
-    df2 = pd.DataFrame(nd_dtrmse2, index=range(1, 51), columns=['training data', 'testing data'])
-    ax = df2.plot(title='20-bag case on dt learner', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Root mean square error')
-    plt.savefig('Figure2-2.png')
-    plt.close()
+    # # ---------- BagLearner Experiments ----------
+    # for bag_count, fig_name in zip([5, 20, 100], ["Figure2-1.png", "Figure2-2.png", "Figure2-3.png"]):
+    #     bag_rmse_list = []
+    #     for leaf in range(1, 51):
+    #         model_bag = bl.BagLearner(dt.DTLearner, bags=bag_count, kwargs={'leaf_size': leaf}, boost=True, verbose=False)
+    #         model_bag.add_evidence(x_train, y_train)
 
-    dtrmse2 = []
-    for leaf_size in range(1, 51):
-        learner2 = bl.BagLearner(dt.DTLearner, bags=100, kwargs={'leaf_size': leaf_size},boost=True, verbose=False)
-        learner2.add_evidence(train_x, train_y)  # train it
-        # evaluate in sample
-        pred_y = learner2.query(train_x)  # get the predictions
-        rmse_train = math.sqrt(((train_y - pred_y) ** 2).sum() / train_y.shape[0])
-        # evaluate out of sample
-        pred_y = learner2.query(test_x)  # get the predictions
-        rmse_test = math.sqrt(((test_y - pred_y) ** 2).sum() / test_y.shape[0])
-        dtrmse2.append([rmse_train, rmse_test])
-    nd_dtrmse2 = np.array(dtrmse2)
-    df2 = pd.DataFrame(nd_dtrmse2, index=range(1, 51), columns=['training data', 'testing data'])
-    ax = df2.plot(title='100-bag case on dt learner', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Root mean square error')
-    plt.savefig('Figure2-3.png')
-    plt.close()
+    #         pred_train = model_bag.query(x_train)
+    #         rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
 
+    #         pred_test = model_bag.query(x_test)
+    #         rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
 
+    #         bag_rmse_list.append([rmse_train, rmse_test])
 
-    timelist = []
-    madlist = []
-    for leaf_size in range(1, 51):
-        t0 = time.time()
-        learner3 = dt.DTLearner(leaf_size=leaf_size, verbose=False)
-        learner3.add_evidence(train_x, train_y)  # train it
-        t1 = time.time()
-        t_dttrain = t1 - t0
-        dt_pred_y = learner3.query(test_x)
-        dt_mad = (np.abs(test_y - dt_pred_y)).mean()
+    #     df_bag = pd.DataFrame(bag_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
+    #     ax = df_bag.plot(title=f"{bag_count}-bag case on dt learner")
+    #     ax.set_xlabel("Leaf size")
+    #     ax.set_ylabel("Root mean square error")
+    #     plt.savefig(fig_name)
+    #     plt.close()
 
-        t2 = time.time()
-        learner4 = rt.RTLearner(leaf_size=leaf_size, verbose=False)
-        learner4.add_evidence(train_x, train_y)
-        t3 = time.time()
-        t_rttrain = t3 - t2
-        rt_pred_y = learner4.query(test_x)
-        rt_mad = (np.abs(test_y - rt_pred_y)).mean()
-        #create list to record the time and mad data
-        timelist.append([t_dttrain, t_rttrain])
-        madlist.append([dt_mad, rt_mad])
+    # # ---------- RT vs DT Training Time and MAD ----------
+    # train_time = []
+    # mad_values = []
 
-    #plot training time figure
-    ndtimelist = np.array(timelist)
-    df3 = pd.DataFrame(ndtimelist, index=range(1,51), columns=['DT training', 'RT training'])
-    ax = df3.plot(title='Comparison of training time between DT and RT', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Training time (s)')
-    plt.savefig('Figure3-1.png')
-    plt.close()
-    #plot mad figure
-    ndmadlist = np.array(madlist)
-    df3 = pd.DataFrame(ndmadlist, index=range(1,51), columns=['DT testing', 'RT testing'])
-    ax = df3.plot(title='Comparison of MAD between DT and RT', fontsize=12)
-    ax.set_xlabel('Leaf size')
-    ax.set_ylabel('Mean absolute deviation')
-    plt.yticks(np.arange(0.003, 0.007, step=0.001))
-    plt.savefig('Figure3-2.png')
-    plt.close()
+    # for leaf in range(1, 51):
+    #     # DT training
+    #     t0 = time.time()
+    #     dt_model = dt.DTLearner(leaf_size=leaf, verbose=False)
+    #     dt_model.add_evidence(x_train, y_train)
+    #     t1 = time.time()
+    #     dt_time = t1 - t0
+
+    #     dt_preds = dt_model.query(x_test)
+    #     dt_mad = np.mean(np.abs(dt_preds - y_test))
+
+    #     # RT training
+    #     t2 = time.time()
+    #     rt_model = rt.RTLearner(leaf_size=leaf, verbose=False)
+    #     rt_model.add_evidence(x_train, y_train)
+    #     t3 = time.time()
+    #     rt_time = t3 - t2
+
+    #     rt_preds = rt_model.query(x_test)
+    #     rt_mad = np.mean(np.abs(rt_preds - y_test))
+
+    #     train_time.append([dt_time, rt_time])
+    #     mad_values.append([dt_mad, rt_mad])
+
+    # df_time = pd.DataFrame(np.array(train_time), index=range(1, 51), columns=["DT training", "RT training"])
+    # ax = df_time.plot(title="Comparison of training time between DT and RT")
+    # ax.set_xlabel("Leaf size")
+    # ax.set_ylabel("Training time (s)")
+    # plt.savefig("Figure3-1.png")
+    # plt.close()
+
+    # df_mad = pd.DataFrame(np.array(mad_values), index=range(1, 51), columns=["DT testing", "RT testing"])
+    # ax = df_mad.plot(title="Comparison of MAD between DT and RT")
+    # ax.set_xlabel("Leaf size")
+    # ax.set_ylabel("Mean absolute deviation")
+    # plt.yticks(np.arange(0.003, 0.007, step=0.001))
+    # plt.savefig("Figure3-2.png")
+    # plt.close()
