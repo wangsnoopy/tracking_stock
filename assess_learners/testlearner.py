@@ -102,27 +102,27 @@ if __name__ == "__main__":
     plt.savefig("Figure1.png")
     plt.close()
 
-    # # ---------- BagLearner Experiments ----------
-    # for bag_count, fig_name in zip([5, 20, 100], ["Figure2-1.png", "Figure2-2.png", "Figure2-3.png"]):
-    #     bag_rmse_list = []
-    #     for leaf in range(1, 51):
-    #         model_bag = bl.BagLearner(dt.DTLearner, bags=bag_count, kwargs={'leaf_size': leaf}, boost=True, verbose=False)
-    #         model_bag.add_evidence(x_train, y_train)
+    # ---------- BagLearner Experiments ----------
+    for bag_count, fig_name in zip([5, 20, 100], ["Figure2-1.png", "Figure2-2.png", "Figure2-3.png"]):
+        bag_rmse_list = []
+        for leaf in range(1, 51):
+            model_bag = bl.BagLearner(dt.DTLearner, bags=bag_count, kwargs={'leaf_size': leaf}, boost=True, verbose=False)
+            model_bag.add_evidence(x_train, y_train)
 
-    #         pred_train = model_bag.query(x_train)
-    #         rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
+            pred_train = model_bag.query(x_train)
+            rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
 
-    #         pred_test = model_bag.query(x_test)
-    #         rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
+            pred_test = model_bag.query(x_test)
+            rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
 
-    #         bag_rmse_list.append([rmse_train, rmse_test])
+            bag_rmse_list.append([rmse_train, rmse_test])
 
-    #     df_bag = pd.DataFrame(bag_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
-    #     ax = df_bag.plot(title=f"{bag_count}-bag case on dt learner")
-    #     ax.set_xlabel("Leaf size")
-    #     ax.set_ylabel("Root mean square error")
-    #     plt.savefig(fig_name)
-    #     plt.close()
+        df_bag = pd.DataFrame(bag_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
+        ax = df_bag.plot(title=f"{bag_count}-bag case on dt learner")
+        ax.set_xlabel("Leaf size")
+        ax.set_ylabel("Root mean square error")
+        plt.savefig(fig_name)
+        plt.close()
 
     # # ---------- RT vs DT Training Time and MAD ----------
     # train_time = []

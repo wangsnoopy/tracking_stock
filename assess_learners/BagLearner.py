@@ -17,51 +17,20 @@ class BagLearner(object):
         return "awang758"
 
     def add_evidence(self, data_x, data_y):
-        """
-        Add training data to learner
+        num_samples = data_x.shape[0]
 
-        :param data_x: A set of feature values used to train the learner
-        :type data_x: numpy.ndarray
-        :param data_y: The value we are attempting to predict given the X data
-        :type data_y: numpy.ndarray
-        """
-        data = np.column_stack([data_x, data_y]) #column stack is used because concatenate or append somehow doesn't work
+        for _ in range(self.bags):
+            sample_indices = np.random.choice(num_samples, num_samples, replace=True)
+            bag_x = data_x[sample_indices]
+            bag_y = data_y[sample_indices]
 
-        learnersaver = []
-        #generate bags:
-        for i in range(0, self.bags):
-            thislearner = self.learner(**self.kwargs)
-            thisindex = self.genindex(data)
-            bagx = data_x[thisindex]
-            bagy = data_y[thisindex]
-            thislearner.add_evidence(bagx, bagy) # call the add evidence function in their own class, not this class
-            self.baglist.append(thislearner)
+            learner_instance = self.learner(**self.kwargs)
+            learner_instance.add_evidence(bag_x, bag_y)
+            self.baglist.append(learner_instance)
 
-        if self.verbose == True:
+        if self.verbose:
             print("bag number:\n", self.bags)
-        return self.baglist
-
-
-    def genindex(self, data):
-        self.data = data
-        indexlist = []
-        bag_rows = int(data.shape[0])
-        for i in range (0, bag_rows):
-            indexlist.append(random.randint(0, data.shape[0] - 1))
-        return indexlist
 
     def query(self, points):
-        """
-        Estimate a set of test points given the model we built.
-
-        :param points: A numpy array with each row corresponding to a specific query.
-        :type points: numpy.ndarray
-        :return: The predicted result of the input data according to the trained model
-        :rtype: numpy.ndarray
-        """
-        Y = np.empty((points.shape[0], 1))
-        for i in self.baglist:
-            Y = np.append(Y, np.array([i.query(points)]).T, axis=1)
-        Y_del = np.delete(Y, 0, 1)
-        pred_y = Y_del.mean(axis=1)
-        return pred_y
+        predictions = np.array([learner.query(points) for learner in self.baglist])
+        return predictions.mean(axis=0)
