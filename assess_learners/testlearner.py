@@ -102,67 +102,67 @@ if __name__ == "__main__":
     plt.savefig("Figure1.png")
     plt.close()
 
-    # ---------- BagLearner Experiments ----------
-    for bag_count, fig_name in zip([5, 20, 100], ["Figure2-1.png", "Figure2-2.png", "Figure2-3.png"]):
-        bag_rmse_list = []
-        for leaf in range(1, 51):
-            model_bag = bl.BagLearner(dt.DTLearner, bags=bag_count, kwargs={'leaf_size': leaf}, boost=True, verbose=False)
-            model_bag.add_evidence(x_train, y_train)
+    # # ---------- BagLearner Experiments ----------
+    # for bag_count, fig_name in zip([5, 20, 100], ["Figure2-1.png", "Figure2-2.png", "Figure2-3.png"]):
+    #     bag_rmse_list = []
+    #     for leaf in range(1, 51):
+    #         model_bag = bl.BagLearner(dt.DTLearner, bags=bag_count, kwargs={'leaf_size': leaf}, boost=True, verbose=False)
+    #         model_bag.add_evidence(x_train, y_train)
 
-            pred_train = model_bag.query(x_train)
-            rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
+    #         pred_train = model_bag.query(x_train)
+    #         rmse_train = math.sqrt(((y_train - pred_train) ** 2).mean())
 
-            pred_test = model_bag.query(x_test)
-            rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
+    #         pred_test = model_bag.query(x_test)
+    #         rmse_test = math.sqrt(((y_test - pred_test) ** 2).mean())
 
-            bag_rmse_list.append([rmse_train, rmse_test])
+    #         bag_rmse_list.append([rmse_train, rmse_test])
 
-        df_bag = pd.DataFrame(bag_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
-        ax = df_bag.plot(title=f"{bag_count}-bag case on dt learner")
-        ax.set_xlabel("Leaf size")
-        ax.set_ylabel("Root mean square error")
-        plt.savefig(fig_name)
-        plt.close()
+    #     df_bag = pd.DataFrame(bag_rmse_list, index=range(1, 51), columns=["training data", "testing data"])
+    #     ax = df_bag.plot(title=f"{bag_count}-bag case on dt learner")
+    #     ax.set_xlabel("Leaf size")
+    #     ax.set_ylabel("Root mean square error")
+    #     plt.savefig(fig_name)
+    #     plt.close()
 
-    # # ---------- RT vs DT Training Time and MAD ----------
-    # train_time = []
-    # mad_values = []
+    # ---------- RT vs DT Training Time and MAD ----------
+    train_time = []
+    mad_values = []
 
-    # for leaf in range(1, 51):
-    #     # DT training
-    #     t0 = time.time()
-    #     dt_model = dt.DTLearner(leaf_size=leaf, verbose=False)
-    #     dt_model.add_evidence(x_train, y_train)
-    #     t1 = time.time()
-    #     dt_time = t1 - t0
+    for leaf in range(1, 51):
+        # DT training
+        t0 = time.time()
+        dt_model = dt.DTLearner(leaf_size=leaf, verbose=False)
+        dt_model.add_evidence(x_train, y_train)
+        t1 = time.time()
+        dt_time = t1 - t0
 
-    #     dt_preds = dt_model.query(x_test)
-    #     dt_mad = np.mean(np.abs(dt_preds - y_test))
+        dt_preds = dt_model.query(x_test)
+        dt_mad = np.mean(np.abs(dt_preds - y_test))
 
-    #     # RT training
-    #     t2 = time.time()
-    #     rt_model = rt.RTLearner(leaf_size=leaf, verbose=False)
-    #     rt_model.add_evidence(x_train, y_train)
-    #     t3 = time.time()
-    #     rt_time = t3 - t2
+        # RT training
+        t2 = time.time()
+        rt_model = rt.RTLearner(leaf_size=leaf, verbose=False)
+        rt_model.add_evidence(x_train, y_train)
+        t3 = time.time()
+        rt_time = t3 - t2
 
-    #     rt_preds = rt_model.query(x_test)
-    #     rt_mad = np.mean(np.abs(rt_preds - y_test))
+        rt_preds = rt_model.query(x_test)
+        rt_mad = np.mean(np.abs(rt_preds - y_test))
 
-    #     train_time.append([dt_time, rt_time])
-    #     mad_values.append([dt_mad, rt_mad])
+        train_time.append([dt_time, rt_time])
+        mad_values.append([dt_mad, rt_mad])
 
-    # df_time = pd.DataFrame(np.array(train_time), index=range(1, 51), columns=["DT training", "RT training"])
-    # ax = df_time.plot(title="Comparison of training time between DT and RT")
-    # ax.set_xlabel("Leaf size")
-    # ax.set_ylabel("Training time (s)")
-    # plt.savefig("Figure3-1.png")
-    # plt.close()
+    df_time = pd.DataFrame(np.array(train_time), index=range(1, 51), columns=["DT training", "RT training"])
+    ax = df_time.plot(title="Comparison of training time between DT and RT")
+    ax.set_xlabel("Leaf size")
+    ax.set_ylabel("Training time (s)")
+    plt.savefig("Figure3-1.png")
+    plt.close()
 
-    # df_mad = pd.DataFrame(np.array(mad_values), index=range(1, 51), columns=["DT testing", "RT testing"])
-    # ax = df_mad.plot(title="Comparison of MAD between DT and RT")
-    # ax.set_xlabel("Leaf size")
-    # ax.set_ylabel("Mean absolute deviation")
-    # plt.yticks(np.arange(0.003, 0.007, step=0.001))
-    # plt.savefig("Figure3-2.png")
-    # plt.close()
+    df_mad = pd.DataFrame(np.array(mad_values), index=range(1, 51), columns=["DT testing", "RT testing"])
+    ax = df_mad.plot(title="Comparison of MAD between DT and RT")
+    ax.set_xlabel("Leaf size")
+    ax.set_ylabel("Mean absolute deviation")
+    plt.yticks(np.arange(0.003, 0.007, step=0.001))
+    plt.savefig("Figure3-2.png")
+    plt.close()
