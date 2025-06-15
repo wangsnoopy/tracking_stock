@@ -45,8 +45,8 @@ def best_4_lin_reg(seed=1489683273):
     :rtype: numpy.ndarray  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
     np.random.seed(seed)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    x = np.random.random(size=((100, 3)*10))  		  	   		 	 	 			  		 			 	 	 		 		 	
-    y = 2 * x[:, 0] + 3 * x[:, 1] + 5 + np.random.normal(0, 0.1, 100)	  	   		 	 	 			  		 			 	 	 		 		 	
+    x = np.random.random(size=(100, 3))*20 - 10	  	   		 	 	 			  		 			 	 	 		 		 	
+    y = 2 * x[:, 0] + 3 * x[:, 1] + 5 + np.random.normal(0, 0.05, 100)	  	   		 	 	 			  		 			 	 	 		 		 	
     # Here's is an example of creating a Y from randomly generated  		  	   		 	 	 			  		 			 	 	 		 		 	
     # X with multiple columns  		  	   		 	 	 			  		 			 	 	 		 		 	
     # y = x[:,0] + np.sin(x[:,1]) + x[:,2]**2 + x[:,3]**3  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -65,8 +65,8 @@ def best_4_dt(seed=1489683273):
     :rtype: numpy.ndarray  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
     np.random.seed(seed)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    x = np.random.random(size=((100, 3)*10))  		  	   		 	 	 			  		 			 	 	 		 		 	
-    y = 2 * x[:, 0] + 3 * x[:, 1] + 5 + np.random.normal(0, 0.1, 100)  		  	   		 	 	 			  		 			 	 	 		 		 	
+    x = np.random.random(size=(100, 3))*20 - 10  		  	   		 	 	 			  		 			 	 	 		 		 	
+    y = 2 * x[:, 0]**2 + np.sin(x[:,1]) * x[:, 1] + np.random.normal(0, 0.05, 100)  		  	   		 	 	 			  		 			 	 	 		 		 	
     return x, y  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
