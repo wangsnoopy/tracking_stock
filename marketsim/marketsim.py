@@ -53,7 +53,7 @@ def study_group():
     return "awang758"
 	  	   		 	 	 			  		 			 	 	 		 		 	
 def compute_portvals(  		  	   		 	 	 			  		 			 	 	 		 		 	
-    orders_file="./orders/orders-01.csv",  		  	   		 	 	 			  		 			 	 	 		 		 	
+    orders_file="./orders/orders-02.csv",  		  	   		 	 	 			  		 			 	 	 		 		 	
     start_val=1000000,  		  	   		 	 	 			  		 			 	 	 		 		 	
     commission=9.95,  		  	   		 	 	 			  		 			 	 	 		 		 	
     impact=0.005,  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -157,7 +157,7 @@ def test_code():
     # note that during autograding his function will not be called.  		  	   		 	 	 			  		 			 	 	 		 		 	
     # Define input parameters  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
-    of = "./orders/orders2.csv"  		  	   		 	 	 			  		 			 	 	 		 		 	
+    of = "./orders/orders-02.csv"  		  	   		 	 	 			  		 			 	 	 		 		 	
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Process orders  		  	   		 	 	 			  		 			 	 	 		 		 	
