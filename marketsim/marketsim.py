@@ -75,90 +75,64 @@ def compute_portvals(
     # NOTE: orders_file may be a string, or it may be a file object. Your  		  	   		   	 		  		  		    	 		 		   		 		  
     # code should work correctly with either input
 
-    # --------------- Orders Data --------------- #
-    # Organize data into df
-    # Read and organize orders data
-    orders = pd.read_csv(orders_file, index_col='Date', parse_dates=True, na_values=['nan'])
+    orders_data = pd.read_csv(orders_file, index_col='Date', parse_dates=True, na_values=['nan'])
 
-    # Get start and end dates
-    start_date = orders.index.min()
-    end_date = orders.index.max()
+    start_date = orders_data.index.min()
+    end_date = orders_data.index.max()
 
-    # Get list of unique stocks
-    unique_stocks = list(orders['Symbol'].unique())
+    unique_stocks = list(orders_data['Symbol'].unique())
 
-    # Get stock prices for the date range
     prices = get_data(unique_stocks, pd.date_range(start_date, end_date)).drop(columns=["SPY"], errors='ignore')
-    prices["Cash"] = 1.0  # Cash column with ones
+    prices["Cash"] = 1.0
 
-    # Initialize trades DataFrame
     trades = pd.DataFrame(0.0, columns=prices.columns, index=prices.index)
 
-    # Process orders to populate trades
-    for date, order in orders.iterrows():
+    for date, order in orders_data.iterrows():
         symbol = order['Symbol']
         shares = order['Shares']
         position_factor = 1 if order['Order'] == "BUY" else -1
 
-        # Skip specific date for bonus points (if applicable)
         if date.date() == dt.date(2011, 6, 15):
             continue
 
-        # Update trades for the stock
         trades.at[date, symbol] += shares * position_factor
 
-        # Calculate cash impact including commission and market impact
         price = prices.at[date, symbol]
         cash_impact = (-position_factor) * price * shares
         market_impact_fee = impact * abs(cash_impact)
         trades.at[date, "Cash"] += cash_impact - market_impact_fee - commission
 
-    # Initialize holdings DataFrame
     holdings = pd.DataFrame(0.0, columns=trades.columns, index=trades.index)
     holdings.iloc[0] = trades.iloc[0]
     holdings.at[holdings.index[0], "Cash"] += float(start_val)
 
-    # Compute holdings for each day
     for i in range(1, len(holdings)):
         holdings.iloc[i] = holdings.iloc[i-1] + trades.iloc[i]
 
-    # Calculate portfolio values
     values = prices * holdings
     port_vals = values.sum(axis=1)
 
-    # Return as a single-column DataFrame
     return pd.DataFrame(port_vals, columns=['Portfolio Value']) 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 	
-def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    Helper function to test code  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # this is a helper function you can use to test your code  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # note that during autograding his function will not be called.  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # Define input parameters  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
+def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 		  	   		 	 	 			  		 			 	 	 		 		 	   		 	 	 			  		 			 	 	 		 		 	
     of = "./orders/orders-10.csv"
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
-    # Compute portfolio values
     portvals = compute_portvals(orders_file=of, start_val=sv, commission=9.95, impact=0.005)
 
-    # Calculate Fund metrics
-    daily_returns = portvals['Portfolio Value'].pct_change().dropna()
-    cumulative_return = (portvals['Portfolio Value'].iloc[-1] / portvals['Portfolio Value'].iloc[0]) - 1
-    average_daily_return = daily_returns.mean()
-    std_daily_returns = daily_returns.std(ddof=1)
-    risk_free_rate = 0
-    sharpe_ratio = np.sqrt(252) * (average_daily_return - risk_free_rate) / std_daily_returns
+    daily_r = portvals['Portfolio Value'].pct_change().dropna()
+    cr = (portvals['Portfolio Value'].iloc[-1] / portvals['Portfolio Value'].iloc[0]) - 1
+    adr = daily_r.mean()
+    sddr = daily_r.std(ddof=1)
+    rfr = 0
+    sr = np.sqrt(252) * (adr - rfr) / sddr
 
-    # SPY benchmark - FIXED VERSION
     start_date = portvals.index.min()
     end_date = portvals.index.max()
     
-    # === GET SPY DATA FOR THE SAME DATES ===
     dates = pd.date_range(start_date, end_date)
     spy_prices = get_data(['$SPX'], dates)[['$SPX']]
-    spy_prices = spy_prices.loc[portvals.index]  # Ensure same dates
+    spy_prices = spy_prices.loc[portvals.index]
     spy_prices = spy_prices.fillna(method='ffill').fillna(method='bfill')
 
     daily_returns_spy = spy_prices.pct_change().dropna()
@@ -171,16 +145,16 @@ def test_code():
     # Print results
     print(f"Date Range: {start_date} to {end_date}")
     print("-" * 30)
-    print(f"Sharpe Ratio of Fund: {sharpe_ratio}")
+    print(f"Sharpe Ratio of Fund: {sr}")
     print(f"Sharpe Ratio of $SPX: {sr_spy}")
     print()
-    print(f"Cumulative Return of Fund: {cumulative_return}")
+    print(f"Cumulative Return of Fund: {cr}")
     print(f"Cumulative Return of $SPX: {cr_spy}")
     print()
-    print(f"Standard Deviation of Fund: {std_daily_returns}")
+    print(f"Standard Deviation of Fund: {sddr}")
     print(f"Standard Deviation of $SPX: {sddr_spy}")
     print()
-    print(f"Average Daily Return of Fund: {average_daily_return}")
+    print(f"Average Daily Return of Fund: {adr}")
     print(f"Average Daily Return of $SPX: {adr_spy}")
     print()
     print(f"Final Portfolio Value: {portvals['Portfolio Value'].iloc[-1]}") 		  	   		 	 	 			  		 			 	 	 		 		 	
