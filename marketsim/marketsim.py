@@ -146,8 +146,8 @@ def compute_portvals(
 def get_portfolio_stats(portvals):
     daily_returns = portvals.pct_change().dropna()
     cr = (portvals.iloc[-1] / portvals.iloc[0]) - 1
-    adr = daily_returns.mean()[0]
-    sddr = daily_returns.std()[0]
+    adr = daily_returns.mean()
+    sddr = daily_returns.std()
     sr = (adr / sddr) * np.sqrt(252)
     return cr, adr, sddr, sr
 
