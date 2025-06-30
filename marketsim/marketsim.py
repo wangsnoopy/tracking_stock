@@ -151,22 +151,21 @@ def test_code():
     risk_free_rate = 0
     sharpe_ratio = np.sqrt(252) * (average_daily_return - risk_free_rate) / std_daily_returns
 
-    # SPY benchmark
+    # SPY benchmark - FIXED VERSION
     start_date = portvals.index.min()
     end_date = portvals.index.max()
-    # Get SPY prices for the same date range and align with portvals
-    spy_prices = get_data(['SPY'], pd.date_range(start_date, end_date), addSPY=True)
+    
+    # Get SPY data properly
+    spy_prices = get_data(['SPY'], pd.date_range(start_date, end_date), addSPY=True)[['SPY']]
     spy_prices.fillna(method='ffill', inplace=True)
     spy_prices.fillna(method='bfill', inplace=True)
-
-    # Align SPY with portfolio dates exactly
-    spy_prices = spy_prices.loc[portvals.index]
 
     spy_daily_returns = spy_prices['SPY'].pct_change().dropna()
     cumulative_return_spy = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
     average_daily_return_spy = spy_daily_returns.mean()
-    std_daily_returns_spy = spy_daily_returns.std()
-    sharpe_ratio_spy = np.sqrt(252) * (average_daily_return_spy / std_daily_returns_spy)
+    std_daily_returns_spy = spy_daily_returns.std(ddof=1)
+    sharpe_ratio_spy = np.sqrt(252) * (average_daily_return_spy - risk_free_rate) / std_daily_returns_spy
+
 
     # Print results
     print(f"Date Range: {start_date} to {end_date}")
