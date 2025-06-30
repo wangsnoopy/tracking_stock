@@ -142,16 +142,7 @@ def compute_portvals(
     portvals_df = pd.DataFrame(portvals, columns=['Portfolio_Value'])
 
     return portvals_df  		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-def get_portfolio_stats(portvals):
-    daily_returns = portvals.pct_change().dropna()
-    cr = (portvals.iloc[-1] / portvals.iloc[0]) - 1
-    adr = daily_returns.mean()
-    sddr = daily_returns.std()
-    sr = (adr / sddr) * np.sqrt(252)
-    return cr, adr, sddr, sr
-
-
+  		  	   		 	 	 			  		 			 	 	 		 	
 def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
     Helper function to test code  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -170,34 +161,49 @@ def test_code():
     else:  		  	   		 	 	 			  		 			 	 	 		 		 	
         "warning, code did not return a DataFrame" 
 
-    cr, adr, sddr, sr = get_portfolio_stats(portvals) 		  	   		 	 	 			  		 			 	 	 		 		 	
+    daily_returns = portvals.pct_change().dropna()
+
+    cumulative_return = (portvals.iloc[-1] / portvals.iloc[0]) - 1
+    average_daily_return = daily_returns.mean()
+    standard_deviation_daily_returns = daily_returns.std(ddof=1)
+    sharpe_ratio = np.sqrt(252) * (average_daily_return / standard_deviation_daily_returns)
+		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # SPY benchmark
     # start_date = portvals.index.min()
     # end_date = portvals.index.max()
-    start_date = dt.datetime(2011, 1, 10)
-    end_date = dt.datetime(2011, 8, 1)
-    prices_SPY = get_data(['SPY'], pd.date_range(start_date, end_date))
-    prices_SPY = prices_SPY.fillna(method="ffill").fillna(method="bfill")
-    norm_SPY = prices_SPY['SPY'] / prices_SPY['SPY'].iloc[0]
-    daily_returns_SPY = norm_SPY.pct_change().dropna()
-    cr_SPY = (norm_SPY.iloc[-1] / norm_SPY.iloc[0]) - 1
-    adr_SPY = daily_returns_SPY.mean()
-    sddr_SPY = daily_returns_SPY.std()
-    sr_SPY = (adr_SPY / sddr_SPY) * np.sqrt(252)
- 		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
-    # Compare portfolio against $SPX                                                                                        
+    # start_date = dt.datetime(2011, 1, 10)
+    # end_date = dt.datetime(2011, 8, 1)
+    # --- Get SPY data for comparison ---
+    start_date = portvals.index.min()
+    end_date = portvals.index.max()
+    spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)
+    spy_prices.fillna(method='ffill', inplace=True)
+    spy_prices.fillna(method='bfill', inplace=True)
+    spy_prices = spy_prices[['SPY']]
+
+    spy_daily_returns = spy_prices['SPY'].pct_change().dropna()
+    cumulative_return_SPY = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
+    average_daily_return_SPY = spy_daily_returns.mean()
+    standard_deviation_SPY = spy_daily_returns.std(ddof=1)
+    sharpe_ratio_SPY = np.sqrt(252) * (average_daily_return_SPY / standard_deviation_SPY)
+
+    # --- Print comparison results ---
     print(f"Date Range: {start_date.date()} to {end_date.date()}")
-    print(f"Sharpe Ratio of Fund: {sr:.4f}")
-    print(f"Sharpe Ratio of SPY : {sr_SPY:.4f}")
-    print(f"Cumulative Return of Fund: {cr:.4f}")
-    print(f"Cumulative Return of SPY : {cr_SPY:.4f}")
-    print(f"Standard Deviation of Fund: {sddr:.4f}")
-    print(f"Standard Deviation of SPY : {sddr_SPY:.4f}")
-    print(f"Average Daily Return of Fund: {adr:.4f}")
-    print(f"Average Daily Return of SPY : {adr_SPY:.4f}")
-    print(f"Final Portfolio Value: {portvals.iloc[-1, 0]:.2f}")  		  	   		 	 	 			  		 			 	 	 		 		 	
+    print("-" * 30)
+    print(f"Sharpe Ratio of Fund: {sharpe_ratio}")
+    print(f"Sharpe Ratio of SPY : {sharpe_ratio_SPY}")
+    print()
+    print(f"Cumulative Return of Fund: {cumulative_return}")
+    print(f"Cumulative Return of SPY : {cumulative_return_SPY}")
+    print()
+    print(f"Standard Deviation of Fund: {standard_deviation_daily_returns}")
+    print(f"Standard Deviation of SPY : {standard_deviation_SPY}")
+    print()
+    print(f"Average Daily Return of Fund: {average_daily_return}")
+    print(f"Average Daily Return of SPY : {average_daily_return_SPY}")
+    print()
+    print(f"Final Portfolio Value: {portvals.iloc[-1]}")  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
