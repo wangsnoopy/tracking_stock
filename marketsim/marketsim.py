@@ -115,7 +115,7 @@ def compute_portvals(
     return pd.DataFrame(port_vals, columns=['Portfolio Value']) 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 	
 def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 		  	   		 	 	 			  		 			 	 	 		 		 	   		 	 	 			  		 			 	 	 		 		 	
-    of = "./orders/orders-10.csv"
+    of = "./orders/orders-02.csv"
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     portvals = compute_portvals(orders_file=of, start_val=sv, commission=9.95, impact=0.005)
