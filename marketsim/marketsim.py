@@ -149,7 +149,7 @@ def get_portfolio_stats(portvals):
     adr = daily_returns.mean()[0]
     sddr = daily_returns.std()[0]
     sr = (adr / sddr) * np.sqrt(252)
-    return cr[0], adr, sddr, sr
+    return cr, adr, sddr, sr
 
 
 def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 	
