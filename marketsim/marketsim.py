@@ -155,32 +155,45 @@ def test_code():
     start_date = portvals.index.min()
     end_date = portvals.index.max()
     
-    # Get SPY data properly
-    spy_prices = get_data(['SPY'], pd.date_range(start_date, end_date), addSPY=True)[['SPY']]
-    spy_prices.fillna(method='ffill', inplace=True)
-    spy_prices.fillna(method='bfill', inplace=True)
+    # Get SPY prices on the same dates as portvals
+    prices_SPY = get_data(['SPY'], pd.date_range(start_date, end_date))['SPY']
+    prices_SPY = prices_SPY.loc[portvals.index]
+    prices_SPY = prices_SPY.fillna(method="ffill").fillna(method="bfill")
 
-    spy_daily_returns = spy_prices['SPY'].pct_change().dropna()
-    cumulative_return_spy = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
-    average_daily_return_spy = spy_daily_returns.mean()
-    std_daily_returns_spy = spy_daily_returns.std(ddof=1)
-    sharpe_ratio_spy = np.sqrt(252) * (average_daily_return_spy - risk_free_rate) / std_daily_returns_spy
+    # Normalize and calculate stats
+    daily_returns_fund = portvals.pct_change().dropna()
+    daily_returns_SPY = prices_SPY.pct_change().dropna()
+
+    cr_fund = (portvals.iloc[-1][0] / portvals.iloc[0][0]) - 1
+    cr_spy = (prices_SPY[-1] / prices_SPY[0]) - 1
+
+    adr_fund = daily_returns_fund.mean()[0]
+    adr_spy = daily_returns_SPY.mean()
+
+    sddr_fund = daily_returns_fund.std()[0]
+    sddr_spy = daily_returns_SPY.std()
+
+    sr_fund = (adr_fund / sddr_fund) * np.sqrt(252)
+    sr_spy = (adr_spy / sddr_spy) * np.sqrt(252)
+
+    # Final Portfolio Value
+    port_val = portvals.iloc[-1][0]
 
 
     # Print results
     print(f"Date Range: {start_date} to {end_date}")
     print("-" * 30)
     print(f"Sharpe Ratio of Fund: {sharpe_ratio}")
-    print(f"Sharpe Ratio of $SPX: {sharpe_ratio_spy}")
+    print(f"Sharpe Ratio of $SPX: {sr_spy}")
     print()
     print(f"Cumulative Return of Fund: {cumulative_return}")
-    print(f"Cumulative Return of $SPX: {cumulative_return_spy}")
+    print(f"Cumulative Return of $SPX: {cr_spy}")
     print()
     print(f"Standard Deviation of Fund: {std_daily_returns}")
-    print(f"Standard Deviation of $SPX: {std_daily_returns_spy}")
+    print(f"Standard Deviation of $SPX: {sddr_spy}")
     print()
     print(f"Average Daily Return of Fund: {average_daily_return}")
-    print(f"Average Daily Return of $SPX: {average_daily_return_spy}")
+    print(f"Average Daily Return of $SPX: {adr_spy}")
     print()
     print(f"Final Portfolio Value: {portvals['Portfolio Value'].iloc[-1]}") 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
