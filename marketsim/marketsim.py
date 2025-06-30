@@ -160,12 +160,12 @@ def test_code():
     spy_prices.fillna(method='bfill', inplace=True)
 
     # Align SPY with portfolio dates exactly
-    spy_prices = spy_prices.reindex(portvals.index)  # <--- THIS is the key fix
+    spy_prices = spy_prices.loc[portvals.index]
 
     spy_daily_returns = spy_prices['SPY'].pct_change().dropna()
     cumulative_return_spy = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
     average_daily_return_spy = spy_daily_returns.mean()
-    std_daily_returns_spy = spy_daily_returns.std(ddof=1)
+    std_daily_returns_spy = spy_daily_returns.std()
     sharpe_ratio_spy = np.sqrt(252) * (average_daily_return_spy / std_daily_returns_spy)
 
     # Print results
