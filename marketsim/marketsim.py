@@ -157,7 +157,7 @@ def test_code():
     
     # === GET SPY DATA FOR THE SAME DATES ===
     dates = pd.date_range(start_date, end_date)
-    spy_prices = get_data(['SPY'], dates)[['SPY']]
+    spy_prices = get_data(['SPX'], dates)[['SPX']]
     spy_prices = spy_prices.loc[portvals.index]  # Ensure same dates
     spy_prices = spy_prices.fillna(method='ffill').fillna(method='bfill')
 
