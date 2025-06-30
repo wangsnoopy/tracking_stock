@@ -77,68 +77,57 @@ def compute_portvals(
 
     # --------------- Orders Data --------------- #
     # Organize data into df
-    orders = pd.read_csv(orders_file, header=0, index_col=0)
+    # Read and organize orders data
+    orders = pd.read_csv(orders_file, index_col='Date', parse_dates=True, na_values=['nan'])
 
-    # Convert index to datetime
-    orders.index = pd.to_datetime(list(orders.index.values))
+    # Get start and end dates
+    start_date = orders.index.min()
+    end_date = orders.index.max()
 
-    # --------------- Prices Data --------------- #
-    # grab start date / end date from orders
-    start_date = pd.to_datetime(min(list(orders.index.values)), format='%Y-%m-%d')
-    end_date = pd.to_datetime(max(list(orders.index.values)), format='%Y-%m-%d')
+    # Get list of unique stocks
+    unique_stocks = list(orders['Symbol'].unique())
 
-    # Get list of all stocks used
-    unique_stocks = list(set(orders["Symbol"]))
+    # Get stock prices for the date range
+    prices = get_data(unique_stocks, pd.date_range(start_date, end_date)).drop(columns=["SPY"], errors='ignore')
+    prices["Cash"] = 1.0  # Cash column with ones
 
-    # get stock data for date range
-    prices = get_data(unique_stocks, pd.date_range(start_date, end_date)).drop(columns=["SPY"])
-    prices["Cash"] = 1  # column should be all ones
+    # Initialize trades DataFrame
+    trades = pd.DataFrame(0.0, columns=prices.columns, index=prices.index)
 
-    # --------------- Trades Data --------------- #
-    # Setup position trades df with zeros, copy column and row indexes from prices
-    ## trades data represents the net impact to positions and cash
-    trades = pd.DataFrame(data=0.000, columns=prices.columns.values, index=prices.index.values)
+    # Process orders to populate trades
+    for date, order in orders.iterrows():
+        symbol = order['Symbol']
+        shares = order['Shares']
+        position_factor = 1 if order['Order'] == "BUY" else -1
 
-    # Populate trades data by tracing orders data
-    for i in range(orders.shape[0]):
-        # Get data for orders
-        order_row = orders.iloc[[i]]  # 0 = symbol, 1 = Position, 2 = Num shares
-        date = order_row.index.values[0]
-        if date == dt.date(2011, 6, 15):
-            # I hope this is still relevant for bonus points, grader please :)
+        # Skip specific date for bonus points (if applicable)
+        if date.date() == dt.date(2011, 6, 15):
             continue
 
-        # Determine if buy or sell
-        if order_row.Order[0] == "BUY":
-            position_factor = 1
-        else:
-            position_factor = -1
+        # Update trades for the stock
+        trades.at[date, symbol] += shares * position_factor
 
-        # Update trades with position, add to existing trade data if already there
-        trades.at[date, order_row.Symbol[0]] += order_row.Shares[0] * position_factor
+        # Calculate cash impact including commission and market impact
+        price = prices.at[date, symbol]
+        cash_impact = (-position_factor) * price * shares
+        market_impact_fee = impact * abs(cash_impact)
+        trades.at[date, "Cash"] += cash_impact - market_impact_fee - commission
 
-        # -- Cash Impacts -- #
-        cash_for_trade_impact = (-1 * position_factor) * prices.at[date, order_row.Symbol[0]] * order_row.Shares[0]
-        # Transaction costs
-        market_impact_fee = impact * abs(cash_for_trade_impact)
+    # Initialize holdings DataFrame
+    holdings = pd.DataFrame(0.0, columns=trades.columns, index=trades.index)
+    holdings.iloc[0] = trades.iloc[0]
+    holdings.at[holdings.index[0], "Cash"] += float(start_val)
 
-        # Update Cash
-        trades.at[date, "Cash"] += cash_for_trade_impact - market_impact_fee - commission
+    # Compute holdings for each day
+    for i in range(1, len(holdings)):
+        holdings.iloc[i] = holdings.iloc[i-1] + trades.iloc[i]
 
-    # --------------- Calculate holdings --------------- #
-    # Setup holdings df
-    holdings = pd.DataFrame(data=0.000, columns=trades.columns.values, index=trades.index.values)
-    holdings.iloc[[0]] = trades.iloc[[0]]
-    holdings.Cash.iat[0] += float(start_val)  # add in starting cash
-
-    for i in range(1, holdings.shape[0]):
-        # Carry over holdings position values from prior trading day, add trades data
-        holdings.iloc[[i]] = holdings.iloc[[i-1]].values + trades.iloc[[i]]
-
+    # Calculate portfolio values
     values = prices * holdings
-    port_values = values.sum(axis=1)  # used for debugging
+    port_vals = values.sum(axis=1)
 
-    return port_values  		  	   		 	 	 			  		 			 	 	 		 		 	
+    # Return as a single-column DataFrame
+    return pd.DataFrame(port_vals, columns=['Portfolio Value']) 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 	
 def test_code():  		  	   		 	 	 			  		 			 	 	 		 		 	
     """  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -151,47 +140,45 @@ def test_code():
     of = "./orders/orders-10.csv"
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
-    # Process orders  		  	   		 	 	 			  		 			 	 	 		 		 	
-    portvals = compute_portvals(orders_file=of, start_val=sv)  		  	   		 	 	 			  		 			 	 	 		 		 	
+    portvals = compute_portvals(orders_file=of, start_val=sv, commission=9.95, impact=0.005)
 
-    daily_returns = portvals.pct_change().dropna()
-    cumulative_return = (portvals.iloc[-1] / portvals.iloc[0]) - 1
+    # Calculate metrics
+    daily_returns = portvals['Portfolio Value'].pct_change().dropna()
+    cumulative_return = (portvals['Portfolio Value'].iloc[-1] / portvals['Portfolio Value'].iloc[0]) - 1
     average_daily_return = daily_returns.mean()
-    standard_deviation_daily_returns = daily_returns.std(ddof=1)
-    risk_free_rate = 0 
-    sharpe_ratio = np.sqrt(252) * ((average_daily_return - risk_free_rate) / standard_deviation_daily_returns)
-		  	   		 	 	 			  		 			 	 	 		 		 	
-  		  	   		 	 	 			  		 			 	 	 		 		 	
+    std_daily_returns = daily_returns.std(ddof=1)
+    risk_free_rate = 0
+    sharpe_ratio = np.sqrt(252) * (average_daily_return - risk_free_rate) / std_daily_returns
+
     # SPY benchmark
     start_date = portvals.index.min()
     end_date = portvals.index.max()
-    spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)
+    spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)[['SPY']]
     spy_prices.fillna(method='ffill', inplace=True)
     spy_prices.fillna(method='bfill', inplace=True)
-    spy_prices = spy_prices[['SPY']]
 
     spy_daily_returns = spy_prices['SPY'].pct_change().dropna()
-    cumulative_return_SPY = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
-    average_daily_return_SPY = spy_daily_returns.mean()
-    standard_deviation_SPY = spy_daily_returns.std(ddof=1)
-    sharpe_ratio_SPY = np.sqrt(252) * ((average_daily_return_SPY - risk_free_rate) / standard_deviation_SPY)
+    cumulative_return_spy = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
+    average_daily_return_spy = spy_daily_returns.mean()
+    std_daily_returns_spy = spy_daily_returns.std(ddof=1)
+    sharpe_ratio_spy = np.sqrt(252) * (average_daily_return_spy - risk_free_rate) / std_daily_returns_spy
 
-    # --- Print comparison results ---
-    print(f"Date Range: {start_date.date()} to {end_date.date()}")
+    # Print results
+    print(f"Date Range: {start_date} to {end_date}")
     print("-" * 30)
     print(f"Sharpe Ratio of Fund: {sharpe_ratio}")
-    print(f"Sharpe Ratio of SPY : {sharpe_ratio_SPY}")
+    print(f"Sharpe Ratio of $SPX: {sharpe_ratio_spy}")
     print()
     print(f"Cumulative Return of Fund: {cumulative_return}")
-    print(f"Cumulative Return of SPY : {cumulative_return_SPY}")
+    print(f"Cumulative Return of $SPX: {cumulative_return_spy}")
     print()
-    print(f"Standard Deviation of Fund: {standard_deviation_daily_returns}")
-    print(f"Standard Deviation of SPY : {standard_deviation_SPY}")
+    print(f"Standard Deviation of Fund: {std_daily_returns}")
+    print(f"Standard Deviation of $SPX: {std_daily_returns_spy}")
     print()
     print(f"Average Daily Return of Fund: {average_daily_return}")
-    print(f"Average Daily Return of SPY : {average_daily_return_SPY}")
+    print(f"Average Daily Return of $SPX: {average_daily_return_spy}")
     print()
-    print(f"Final Portfolio Value: {portvals.iloc[-1]}")  		  	   		 	 	 			  		 			 	 	 		 		 	
+    print(f"Final Portfolio Value: {portvals['Portfolio Value'].iloc[-1]}") 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
 if __name__ == "__main__":  		  	   		 	 	 			  		 			 	 	 		 		 	
