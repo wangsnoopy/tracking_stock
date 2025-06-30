@@ -155,29 +155,32 @@ def test_code():
     start_date = portvals.index.min()
     end_date = portvals.index.max()
     
-    # Get SPY prices on the same dates as portvals
-    prices_SPY = get_data(['SPY'], pd.date_range(start_date, end_date))['SPY']
-    prices_SPY = prices_SPY.loc[portvals.index]
-    prices_SPY = prices_SPY.fillna(method="ffill").fillna(method="bfill")
+    # === GET SPY DATA FOR THE SAME DATES ===
+    dates = pd.date_range(start_date, end_date)
+    spy_prices = get_data(['SPY'], dates)[['SPY']]
+    spy_prices = spy_prices.loc[portvals.index]  # Ensure same dates
+    spy_prices = spy_prices.fillna(method='ffill').fillna(method='bfill')
 
-    # Normalize and calculate stats
+    # === CALCULATE FUND METRICS ===
+    portvals_normalized = portvals / portvals.iloc[0]
     daily_returns_fund = portvals.pct_change().dropna()
-    daily_returns_SPY = prices_SPY.pct_change().dropna()
 
-    cr_fund = (portvals.iloc[-1][0] / portvals.iloc[0][0]) - 1
-    cr_spy = (prices_SPY[-1] / prices_SPY[0]) - 1
-
+    cr_fund = (portvals.iloc[-1, 0] / portvals.iloc[0, 0]) - 1
     adr_fund = daily_returns_fund.mean()[0]
-    adr_spy = daily_returns_SPY.mean()
-
     sddr_fund = daily_returns_fund.std()[0]
-    sddr_spy = daily_returns_SPY.std()
-
     sr_fund = (adr_fund / sddr_fund) * np.sqrt(252)
+
+    # === CALCULATE SPY METRICS ===
+    spy_normalized = spy_prices / spy_prices.iloc[0]
+    daily_returns_spy = spy_prices.pct_change().dropna()
+
+    cr_spy = (spy_prices.iloc[-1, 0] / spy_prices.iloc[0, 0]) - 1
+    adr_spy = daily_returns_spy.mean()[0]
+    sddr_spy = daily_returns_spy.std()[0]
     sr_spy = (adr_spy / sddr_spy) * np.sqrt(252)
 
-    # Final Portfolio Value
-    port_val = portvals.iloc[-1][0]
+    # === FINAL PORTFOLIO VALUE ===
+    final_value = portvals.iloc[-1, 0]
 
 
     # Print results
