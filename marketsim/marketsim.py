@@ -140,9 +140,10 @@ def test_code():
     of = "./orders/orders-10.csv"
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
+    # Compute portfolio values
     portvals = compute_portvals(orders_file=of, start_val=sv, commission=9.95, impact=0.005)
 
-    # Calculate metrics
+    # Calculate Fund metrics
     daily_returns = portvals['Portfolio Value'].pct_change().dropna()
     cumulative_return = (portvals['Portfolio Value'].iloc[-1] / portvals['Portfolio Value'].iloc[0]) - 1
     average_daily_return = daily_returns.mean()
@@ -153,7 +154,7 @@ def test_code():
     # SPY benchmark
     start_date = portvals.index.min()
     end_date = portvals.index.max()
-    spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)[['SPY']]
+    spy_prices = get_data([], pd.date_range(start_date, end_date), addSPY=True)[['SPY']]
     spy_prices.fillna(method='ffill', inplace=True)
     spy_prices.fillna(method='bfill', inplace=True)
 
