@@ -170,13 +170,10 @@ def test_code():
 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # SPY benchmark
+    start_date = dt.datetime(2011, 1, 10)
+    end_date = dt.datetime(2011, 8, 1)
     # start_date = portvals.index.min()
     # end_date = portvals.index.max()
-    # start_date = dt.datetime(2011, 1, 10)
-    # end_date = dt.datetime(2011, 8, 1)
-    # --- Get SPY data for comparison ---
-    start_date = portvals.index.min()
-    end_date = portvals.index.max()
     spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)
     spy_prices.fillna(method='ffill', inplace=True)
     spy_prices.fillna(method='bfill', inplace=True)
