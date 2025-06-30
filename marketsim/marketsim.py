@@ -156,24 +156,19 @@ def test_code():
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Process orders  		  	   		 	 	 			  		 			 	 	 		 		 	
     portvals = compute_portvals(orders_file=of, start_val=sv)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    if isinstance(portvals, pd.DataFrame):  		  	   		 	 	 			  		 			 	 	 		 		 	
-        portvals = portvals[portvals.columns[0]]  # just get the first column  		  	   		 	 	 			  		 			 	 	 		 		 	
-    else:  		  	   		 	 	 			  		 			 	 	 		 		 	
-        "warning, code did not return a DataFrame" 
 
     daily_returns = portvals.pct_change().dropna()
-
-    cumulative_return = (portvals.iloc[-1] / portvals.iloc[0]) - 1
-    average_daily_return = daily_returns.mean()
-    standard_deviation_daily_returns = daily_returns.std(ddof=1)
+    cumulative_return = (portvals.iloc[-1, 0] / portvals.iloc[0, 0]) - 1
+    average_daily_return = daily_returns.mean()[0]
+    standard_deviation_daily_returns = daily_returns.std(ddof=1)[0]
     sharpe_ratio = np.sqrt(252) * (average_daily_return / standard_deviation_daily_returns)
 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # SPY benchmark
-    start_date = dt.datetime(2011, 1, 10)
-    end_date = dt.datetime(2011, 8, 1)
-    # start_date = portvals.index.min()
-    # end_date = portvals.index.max()
+    # start_date = dt.datetime(2011, 1, 10)
+    # end_date = dt.datetime(2011, 8, 1)
+    start_date = portvals.index.min()
+    end_date = portvals.index.max()
     spy_prices = get_data(["SPY"], pd.date_range(start_date, end_date), addSPY=True)
     spy_prices.fillna(method='ffill', inplace=True)
     spy_prices.fillna(method='bfill', inplace=True)
