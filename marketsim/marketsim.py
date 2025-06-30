@@ -151,17 +151,18 @@ def test_code():
     # note that during autograding his function will not be called.  		  	   		 	 	 			  		 			 	 	 		 		 	
     # Define input parameters  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
-    of = "./orders/orders-12.csv"
+    of = "./orders/orders-10.csv"
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Process orders  		  	   		 	 	 			  		 			 	 	 		 		 	
     portvals = compute_portvals(orders_file=of, start_val=sv)  		  	   		 	 	 			  		 			 	 	 		 		 	
 
     daily_returns = portvals.pct_change().dropna()
-    cumulative_return = (portvals.iloc[-1, 0] / portvals.iloc[0, 0]) - 1
-    average_daily_return = daily_returns.mean()[0]
-    standard_deviation_daily_returns = daily_returns.std(ddof=1)[0]
-    sharpe_ratio = np.sqrt(252) * (average_daily_return / standard_deviation_daily_returns)
+    cumulative_return = (portvals.iloc[-1] / portvals.iloc[0]) - 1
+    average_daily_return = daily_returns.mean()
+    standard_deviation_daily_returns = daily_returns.std(ddof=1)
+    risk_free_rate = 0 
+    sharpe_ratio = np.sqrt(252) * ((average_daily_return - risk_free_rate) / standard_deviation_daily_returns)
 		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # SPY benchmark
@@ -178,7 +179,7 @@ def test_code():
     cumulative_return_SPY = (spy_prices['SPY'].iloc[-1] / spy_prices['SPY'].iloc[0]) - 1
     average_daily_return_SPY = spy_daily_returns.mean()
     standard_deviation_SPY = spy_daily_returns.std(ddof=1)
-    sharpe_ratio_SPY = np.sqrt(252) * (average_daily_return_SPY / standard_deviation_SPY)
+    sharpe_ratio_SPY = np.sqrt(252) * ((average_daily_return_SPY - risk_free_rate) / standard_deviation_SPY)
 
     # --- Print comparison results ---
     print(f"Date Range: {start_date.date()} to {end_date.date()}")
