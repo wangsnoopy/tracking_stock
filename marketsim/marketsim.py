@@ -53,7 +53,7 @@ def study_group():
     return "awang758"
 	  	   		 	 	 			  		 			 	 	 		 		 	
 def compute_portvals(  		  	   		 	 	 			  		 			 	 	 		 		 	
-    orders_file="./orders/orders-02.csv",  		  	   		 	 	 			  		 			 	 	 		 		 	
+    orders_file="./orders/orders.csv",  		  	   		 	 	 			  		 			 	 	 		 		 	
     start_val=1000000,  		  	   		 	 	 			  		 			 	 	 		 		 	
     commission=9.95,  		  	   		 	 	 			  		 			 	 	 		 		 	
     impact=0.005,  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -157,7 +157,7 @@ def test_code():
     # note that during autograding his function will not be called.  		  	   		 	 	 			  		 			 	 	 		 		 	
     # Define input parameters  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
-    of = "./orders/orders-02.csv"  		  	   		 	 	 			  		 			 	 	 		 		 	
+    of = "./orders/orders-01.csv"  		  	   		 	 	 			  		 			 	 	 		 		 	
     sv = 1000000  		  	   		 	 	 			  		 			 	 	 		 		 	
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Process orders  		  	   		 	 	 			  		 			 	 	 		 		 	
@@ -169,8 +169,8 @@ def test_code():
   		  	   		 	 	 			  		 			 	 	 		 		 	
     # Get portfolio stats  		  	   		 	 	 			  		 			 	 	 		 		 	
     # Here we just fake the data. you should use your code from previous assignments.  		  	   		 	 	 			  		 			 	 	 		 		 	
-    start_date = dt.datetime(2008, 1, 1)  		  	   		 	 	 			  		 			 	 	 		 		 	
-    end_date = dt.datetime(2008, 6, 1)  		  	   		 	 	 			  		 			 	 	 		 		 	
+    start_date = dt.datetime(2011, 1, 1)  		  	   		 	 	 			  		 			 	 	 		 		 	
+    end_date = dt.datetime(2011, 1, 20)  		  	   		 	 	 			  		 			 	 	 		 		 	
     cum_ret, avg_daily_ret, std_daily_ret, sharpe_ratio = [  		  	   		 	 	 			  		 			 	 	 		 		 	
         0.2,  		  	   		 	 	 			  		 			 	 	 		 		 	
         0.01,  		  	   		 	 	 			  		 			 	 	 		 		 	
