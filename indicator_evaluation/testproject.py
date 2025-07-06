@@ -98,7 +98,8 @@ def plot_normalized_data(df, title, ylabel, xlabel="Date", save_path="./images/"
     plt.grid(True)
     plt.legend(loc="best")
     plt.tight_layout()
-    plt.savefig(f"{save_path}{title.replace(' ', '_').replace('/', '')}.png")
+    # plt.savefig(f"{save_path}{title.replace(' ', '_').replace('/', '')}.png")
+    plt.show()
     plt.close()
 
 
@@ -157,7 +158,8 @@ if __name__ == "__main__":
     ax.grid(True)
     ax.legend(loc="best")
     plt.tight_layout()
-    plt.savefig("./images/TOS_vs_Benchmark.png")
+    # plt.savefig("./images/TOS_vs_Benchmark.png")
+    plt.show()
     plt.close()
     print("Generated TOS vs. Benchmark plot: ./images/TOS_vs_Benchmark.png")
 
@@ -219,7 +221,8 @@ if __name__ == "__main__":
     ax2.legend()
     ax2.grid(True)
     plt.tight_layout()
-    plt.savefig("./images/Bollinger_Bands_Percentage.png")
+    # plt.savefig("./images/Bollinger_Bands_Percentage.png")
+    plt.show()
     plt.close()
     print("Generated Bollinger Bands Percentage plot: ./images/Bollinger_Bands_Percentage.png")
 
