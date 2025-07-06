@@ -1,0 +1,8 @@
+Date Range: 2008-01-01 00:00:00 to 2009-12-31 00:00:00
+
+--- Portfolio Statistics ---
+Metric                         | Benchmark       | Optimal Portfolio   
+------------------------------ | --------------- | --------------------
+Cumulative Return              | 0.012300        | 5.786100            
+Stdev of Daily Returns         | 0.017004        | 0.004548            
+Mean of Daily Returns          | 0.000168        | 0.003817            
