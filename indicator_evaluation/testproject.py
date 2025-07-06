@@ -23,15 +23,6 @@ from util import get_data # Assuming util.py is in the parent directory or PYTHO
 # This version of compute_portvals directly accepts a trades DataFrame
 # You should integrate this logic into your marketsimcode.py's compute_portvals
 # or create a new function in it like compute_portvals_from_trades
-
-def author():
-    """
-    :return: The GT username of the student
-    :rtype: str
-    """
-    return "awang758"
-
-
 def compute_portvals_from_trades(trades_df, start_val=100000, commission=0.0, impact=0.0):
     """
     Computes the portfolio values directly from a trades DataFrame.
@@ -106,21 +97,22 @@ def compute_portfolio_stats(port_vals, daily_rf=0):
 
 def plot_indicator_with_signals(price_series, indicator_series, title, indicator_label,
                                 buy_signals=None, sell_signals=None,
-                                indicator_min=None, indicator_max=None,
-                                overbought_level=None, oversold_level=None,
-                                save_path="./images/"):
+                                overbought_level=None, oversold_level=None): # Removed save_path
     """
     Plots the stock price and an indicator, along with buy/sell signals.
+    Displays the plot instead of saving it.
     """
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(12, 10))
 
     # Plot 1: Price with Buy/Sell Signals
     ax1.plot(price_series.index, price_series, label=f'{price_series.name} Price', color='blue')
     if buy_signals is not None and not buy_signals.empty:
-        ax1.scatter(buy_signals.index, price_series.loc[buy_signals.index],
+        # Corrected: Use buy_signals directly as it's already a DatetimeIndex
+        ax1.scatter(buy_signals, price_series.loc[buy_signals],
                     marker='^', color='g', s=100, label='Buy Signal', alpha=0.7)
     if sell_signals is not None and not sell_signals.empty:
-        ax1.scatter(sell_signals.index, price_series.loc[sell_signals.index],
+        # Corrected: Use sell_signals directly as it's already a DatetimeIndex
+        ax1.scatter(sell_signals, price_series.loc[sell_signals],
                     marker='v', color='r', s=100, label='Sell Signal', alpha=0.7)
     ax1.set_ylabel("Price")
     ax1.set_title(f"{price_series.name} Price with {indicator_label} Signals")
@@ -129,10 +121,6 @@ def plot_indicator_with_signals(price_series, indicator_series, title, indicator
 
     # Plot 2: Indicator Values
     ax2.plot(indicator_series.index, indicator_series, label=indicator_label, color='purple')
-    if indicator_min is not None:
-        ax2.axhline(indicator_min, color='gray', linestyle=':', label=f'{indicator_label} Min ({indicator_min:.2f})')
-    if indicator_max is not None:
-        ax2.axhline(indicator_max, color='gray', linestyle=':', label=f'{indicator_label} Max ({indicator_max:.2f})')
     if overbought_level is not None:
         ax2.axhline(overbought_level, color='red', linestyle='--', label='Overbought')
     if oversold_level is not None:
@@ -145,8 +133,8 @@ def plot_indicator_with_signals(price_series, indicator_series, title, indicator
     ax2.grid(True)
 
     plt.tight_layout()
-    plt.savefig(f"{title.replace(' ', '_').replace('/', '')}.png")
-    plt.close()
+    plt.show() # Display the plot
+    plt.close() # Close the plot figure after displaying
 
 
 if __name__ == "__main__":
@@ -156,10 +144,7 @@ if __name__ == "__main__":
     ed = dt.datetime(2009, 12, 31)
     sv = 100000
 
-    # Ensure images directory exists
-    import os
-    if not os.path.exists("images"):
-        os.makedirs("images")
+    # Removed: os.makedirs("images") as we are not saving files
 
     # --- Figure 1: Theoretically Optimal Strategy (TOS) ---
     print("--- Running Theoretically Optimal Strategy (TOS) ---")
@@ -207,9 +192,9 @@ if __name__ == "__main__":
     ax.grid(True)
     ax.legend(loc="best")
     plt.tight_layout()
-    plt.savefig("TOS_Daily_Portfolio_Value.png") # Changed filename for clarity
-    plt.close()
-    print("Generated TOS vs. Benchmark plot: ./images/TOS_Daily_Portfolio_Value.png")
+    plt.show() # Display the plot
+    plt.close() # Close the figure
+    print("Displayed TOS vs. Benchmark plot.")
 
     # --- Compute and Print TOS and Benchmark Statistics ---
     cr_tos, adr_tos, sddr_tos, sr_tos = compute_portfolio_stats(portvals_tos['Portfolio Value'])
@@ -221,8 +206,6 @@ if __name__ == "__main__":
     print(f"{'Cumulative Return':<30} | {cr_benchmark:<15.6f} | {cr_tos:<20.6f}")
     print(f"{'Stdev of Daily Returns':<30} | {sddr_benchmark:<15.6f} | {sddr_tos:<20.6f}")
     print(f"{'Mean of Daily Returns':<30} | {adr_benchmark:<15.6f} | {adr_tos:<20.6f}")
-    # Sharpe Ratio is not explicitly requested in the table, but often calculated.
-    # print(f"{'Sharpe Ratio':<30} | {sr_benchmark:<15.6f} | {sr_tos:<20.6f}")
 
     # Optionally write to a results file
     with open("p6_results.txt", "w") as f:
@@ -246,9 +229,6 @@ if __name__ == "__main__":
     bbp_values = ind.bollinger_bands_percentage(prices_for_indicators, window=20)
     
     # Generate signals for %B
-    # Buy when %B drops below 0 (oversold)
-    # Sell when %B goes above 1 (overbought)
-    # For a more robust signal, you might consider crossovers with a moving average of %B or specific thresholds
     bbp_buy_signals = bbp_values[bbp_values < 0].index
     bbp_sell_signals = bbp_values[bbp_values > 1].index
 
@@ -262,23 +242,14 @@ if __name__ == "__main__":
         overbought_level=1.0,
         oversold_level=0.0
     )
-    print("Generated Bollinger Bands Percentage plot: ./images/JPM_Price_with_Bollinger_B_and_Trade_Signals.png")
+    print("Displayed Bollinger Bands Percentage plot.")
 
 
     # --- Figure 2: CCI (JPM Price with buy/sell signal from CCI crossover) ---
-    # NOTE: For CCI, get_data might need to fetch High/Low. Assuming prices_for_indicators
-    # now represents a DataFrame that has 'High', 'Low', 'Adj Close' if available,
-    # or CCI will simplify to using 'Adj Close' for all.
     print("Generating CCI plot...")
-    # To get High/Low for CCI, you might need a separate call to get_data like:
-    # all_prices = get_data([symbol], pd.date_range(sd, ed), addSPY=False, colname=['Adj Close', 'High', 'Low']).dropna()
-    # Or modify util.get_data to fetch all by default.
-    # For now, will pass prices_for_indicators which is just Adj Close.
     cci_values = ind.cci(prices_for_indicators, window=20)
     
     # Generate signals for CCI (e.g., crossover +/- 100 for buy/sell)
-    # Buy when CCI crosses above -100 (oversold condition easing)
-    # Sell when CCI crosses below +100 (overbought condition easing)
     cci_buy_signals = prices_for_indicators[(cci_values.shift(1) < -100) & (cci_values >= -100)].index
     cci_sell_signals = prices_for_indicators[(cci_values.shift(1) > 100) & (cci_values <= 100)].index
 
@@ -292,7 +263,7 @@ if __name__ == "__main__":
         overbought_level=100,
         oversold_level=-100
     )
-    print("Generated CCI plot: ./images/JPM_Price_with_CCI_and_Trade_Signals.png")
+    print("Displayed CCI plot.")
 
 
     # --- Figure 3: MACD (JPM price with buy/sell signal from MACD histogram crossover) ---
@@ -300,8 +271,6 @@ if __name__ == "__main__":
     macd_hist_values = ind.macd_histogram(prices_for_indicators, fast_period=12, slow_period=26, signal_period=9)
 
     # Generate signals for MACD Histogram (crossover zero line)
-    # Buy when MACD Histogram crosses above 0 (momentum shifting up)
-    # Sell when MACD Histogram crosses below 0 (momentum shifting down)
     macd_buy_signals = prices_for_indicators[(macd_hist_values.shift(1) < 0) & (macd_hist_values >= 0)].index
     macd_sell_signals = prices_for_indicators[(macd_hist_values.shift(1) > 0) & (macd_hist_values <= 0)].index
 
@@ -315,7 +284,7 @@ if __name__ == "__main__":
         overbought_level=0, # The zero line acts as a "crossover" level
         oversold_level=0
     )
-    print("Generated MACD Histogram plot: ./images/JPM_Price_with_MACD_Histogram_and_Trade_Signals.png")
+    print("Displayed MACD Histogram plot.")
 
 
     # --- Figure 5: RSI (JPM price with buy/sell signall from RSI crossover) ---
@@ -323,8 +292,6 @@ if __name__ == "__main__":
     rsi_values = ind.rsi(prices_for_indicators, window=14)
 
     # Generate signals for RSI (crossover overbought/oversold levels)
-    # Buy when RSI crosses below 30 (oversold) and then above 30
-    # Sell when RSI crosses above 70 (overbought) and then below 70
     rsi_buy_signals = prices_for_indicators[(rsi_values.shift(1) < 30) & (rsi_values >= 30)].index
     rsi_sell_signals = prices_for_indicators[(rsi_values.shift(1) > 70) & (rsi_values <= 70)].index
 
@@ -338,19 +305,6 @@ if __name__ == "__main__":
         overbought_level=70,
         oversold_level=30
     )
-    print("Generated RSI plot: ./images/JPM_Price_with_RSI_and_Trade_Signals.png")
+    print("Displayed RSI plot.")
     
-    # --- Last Indicator: Price/SMA Ratio (not explicitly requested as a figure title, but needed) ---
-    # Since you requested 5 figures with specific titles, I'll use the 4 requested indicator figures + TOS.
-    # The Price/SMA Ratio is a good fifth *indicator* for your report, but might not need a dedicated *plot*
-    # based on your explicit list of 5 titles. If you need a 6th plot for this, let me know.
-    # For now, I'll assume the 5 requested titles are the 5 plots.
-    # I've used Bollinger Bands, CCI, MACD, RSI, and TOS for the 5 plots.
-    
-    # For completeness, here's how you'd call Price/SMA Ratio, though its plot isn't explicitly requested
-    # with a specific title in your list of 5.
-    price_sma_ratio_values = ind.price_sma_ratio(prices_for_indicators, window=20)
-    # You could add plotting for this if needed, similar to above.
-    # E.g., plot_indicator_with_signals(..., title="JPM Price with Price/SMA Ratio and Trade Signals", ...)
-
-    print("\n--- All tasks completed. Review generated plots in the 'images' folder and p6_results.txt. ---")
+    print("\n--- All tasks completed. Review displayed plots and p6_results.txt. ---")
