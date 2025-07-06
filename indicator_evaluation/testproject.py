@@ -10,19 +10,26 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import TheoreticallyOptimalStrategy as tos
-import indicators as ind # Assuming you name your indicators file 'indicators.py'
+import indicators as ind
+# Make sure your marketsimcode.py has a function like compute_portvals_from_trades
+# or its main compute_portvals function accepts a DataFrame directly.
+# For this example, I'll assume you copy-pasted the helper function into marketsimcode.py
+# or adapted its primary function.
+import marketsimcode as msc # Assuming your marketsim code is in marketsimcode.py
+
 from util import get_data # Assuming util.py is in the parent directory or PYTHONPATH is set
 
 # --- Helper function for marketsim (adapt your marketsimcode.py) ---
 # This version of compute_portvals directly accepts a trades DataFrame
 # You should integrate this logic into your marketsimcode.py's compute_portvals
 # or create a new function in it like compute_portvals_from_trades
-def author():  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :return: The GT username of the student  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :rtype: str  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    return "awang758" 
+
+def author():
+    """
+    :return: The GT username of the student
+    :rtype: str
+    """
+    return "awang758"
 
 
 def compute_portvals_from_trades(trades_df, start_val=100000, commission=0.0, impact=0.0):
@@ -36,42 +43,49 @@ def compute_portvals_from_trades(trades_df, start_val=100000, commission=0.0, im
         portvals = pd.DataFrame(index=dates, data=start_val, columns=['Portfolio Value'])
         return portvals
 
+    # Ensure trades_df has at least one column (the symbol)
+    if trades_df.columns.empty:
+        raise ValueError("trades_df must contain at least one symbol column.")
+    
     unique_symbols = trades_df.columns.tolist()
     start_date = trades_df.index.min()
     end_date = trades_df.index.max()
 
-    prices = get_data(unique_symbols, pd.date_range(start_date, end_date)).dropna()
-    prices["Cash"] = 1.0 # Add cash column for calculations
-
-    # Ensure prices are aligned with trades_df index, handling potential missing dates
+    prices = get_data(unique_symbols, pd.date_range(start_date, end_date), addSPY=False).dropna()
+    
+    # Reindex prices to match trades_df index to ensure consistent dates
     prices = prices.reindex(trades_df.index).ffill().bfill()
-    prices['Cash'] = 1.0 # Ensure cash column exists after reindexing
+    prices['Cash'] = 1.0 # Add cash column for calculations
 
-    # Initialize trades DataFrame with all necessary columns (symbols + Cash)
+
+    # Initialize a full trades DataFrame with all necessary columns (symbols + Cash)
+    # This is where the actual cash changes from trades will be recorded
     full_trades_df = pd.DataFrame(0.0, columns=prices.columns, index=prices.index)
 
-    # Populate full_trades_df based on trades_df
-    for symbol in unique_symbols:
-        if symbol in trades_df.columns:
-            full_trades_df[symbol] = trades_df[symbol]
-
-    # Calculate cash changes due to trades, commission, and impact
+    # Populate full_trades_df based on trades_df and apply costs
     for date in trades_df.index:
         for symbol in unique_symbols:
             if trades_df.loc[date, symbol] != 0:
                 shares = trades_df.loc[date, symbol]
                 price = prices.loc[date, symbol]
+
+                # Update the shares for the symbol
+                full_trades_df.loc[date, symbol] += shares
+
+                # Calculate cash change including commission and impact
                 trade_value = shares * price
                 cash_change = -trade_value - (commission + impact * abs(trade_value))
                 full_trades_df.loc[date, 'Cash'] += cash_change
 
+    # Calculate holdings over time
     holdings = pd.DataFrame(0.0, columns=full_trades_df.columns, index=full_trades_df.index)
-    holdings.iloc[0] = full_trades_df.iloc[0]
-    holdings.loc[holdings.index[0], "Cash"] += start_val
+    holdings.iloc[0] = full_trades_df.iloc[0] # Apply first day's trades
+    holdings.loc[holdings.index[0], "Cash"] += start_val # Add initial cash
 
     for i in range(1, len(holdings)):
         holdings.iloc[i] = holdings.iloc[i-1] + full_trades_df.iloc[i]
 
+    # Calculate portfolio values
     values = prices * holdings
     port_vals = values.sum(axis=1)
 
@@ -90,16 +104,48 @@ def compute_portfolio_stats(port_vals, daily_rf=0):
     sharpe_ratio = np.sqrt(252) * ((avg_daily_return - daily_rf) / std_daily_return)
     return cumulative_return, avg_daily_return, std_daily_return, sharpe_ratio
 
-def plot_normalized_data(df, title, ylabel, xlabel="Date", save_path="./images/"):
-    plt.figure(figsize=(12, 7))
-    ax = df.plot(title=title, fontsize=12)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    plt.grid(True)
-    plt.legend(loc="best")
+def plot_indicator_with_signals(price_series, indicator_series, title, indicator_label,
+                                buy_signals=None, sell_signals=None,
+                                indicator_min=None, indicator_max=None,
+                                overbought_level=None, oversold_level=None,
+                                save_path="./images/"):
+    """
+    Plots the stock price and an indicator, along with buy/sell signals.
+    """
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(12, 10))
+
+    # Plot 1: Price with Buy/Sell Signals
+    ax1.plot(price_series.index, price_series, label=f'{price_series.name} Price', color='blue')
+    if buy_signals is not None and not buy_signals.empty:
+        ax1.scatter(buy_signals.index, price_series.loc[buy_signals.index],
+                    marker='^', color='g', s=100, label='Buy Signal', alpha=0.7)
+    if sell_signals is not None and not sell_signals.empty:
+        ax1.scatter(sell_signals.index, price_series.loc[sell_signals.index],
+                    marker='v', color='r', s=100, label='Sell Signal', alpha=0.7)
+    ax1.set_ylabel("Price")
+    ax1.set_title(f"{price_series.name} Price with {indicator_label} Signals")
+    ax1.legend()
+    ax1.grid(True)
+
+    # Plot 2: Indicator Values
+    ax2.plot(indicator_series.index, indicator_series, label=indicator_label, color='purple')
+    if indicator_min is not None:
+        ax2.axhline(indicator_min, color='gray', linestyle=':', label=f'{indicator_label} Min ({indicator_min:.2f})')
+    if indicator_max is not None:
+        ax2.axhline(indicator_max, color='gray', linestyle=':', label=f'{indicator_label} Max ({indicator_max:.2f})')
+    if overbought_level is not None:
+        ax2.axhline(overbought_level, color='red', linestyle='--', label='Overbought')
+    if oversold_level is not None:
+        ax2.axhline(oversold_level, color='green', linestyle='--', label='Oversold')
+
+    ax2.set_xlabel("Date")
+    ax2.set_ylabel(indicator_label)
+    ax2.set_title(f"{indicator_label} Values")
+    ax2.legend()
+    ax2.grid(True)
+
     plt.tight_layout()
-    # plt.savefig(f"{save_path}{title.replace(' ', '_').replace('/', '')}.png")
-    plt.show()
+    plt.savefig(f"{title.replace(' ', '_').replace('/', '')}.png")
     plt.close()
 
 
@@ -110,32 +156,35 @@ if __name__ == "__main__":
     ed = dt.datetime(2009, 12, 31)
     sv = 100000
 
-    # --- Part 1: Theoretically Optimal Strategy (TOS) ---
+    # Ensure images directory exists
+    import os
+    if not os.path.exists("images"):
+        os.makedirs("images")
+
+    # --- Figure 1: Theoretically Optimal Strategy (TOS) ---
     print("--- Running Theoretically Optimal Strategy (TOS) ---")
     df_trades_tos = tos.testPolicy(symbol=symbol, sd=sd, ed=ed, sv=sv)
 
     # Use the adapted market simulator to get portfolio values for TOS
-    # IMPORTANT: Ensure compute_portvals_from_trades is available in marketsimcode.py
-    # or adapt marketsimcode.py's compute_portvals to accept DataFrame directly.
-    portvals_tos = compute_portvals_from_trades(
-        trades_df=df_trades_tos,
+    portvals_tos = compute_portvals_from_trades( # Using the local helper. Adapt marketsimcode.py for actual use.
+        trades_df=df_trades_tos[[symbol]].fillna(0), # Ensure only symbol column and handle NaNs from TOS
         start_val=sv,
-        commission=0.00, # As per TOS requirements
-        impact=0.00     # As per TOS requirements
+        commission=0.00,
+        impact=0.00
     )
 
     # --- Benchmark Calculation ---
     # Benchmark: starting with $100,000 cash, investing in 1000 shares of JPM, and holding
-    prices_jpm = get_data([symbol], pd.date_range(sd, ed), addSPY=False).dropna()
-    prices_jpm = prices_jpm[[symbol]] # Ensure only JPM column
+    prices_jpm_benchmark = get_data([symbol], pd.date_range(sd, ed), addSPY=False).dropna()
+    prices_jpm_benchmark = prices_jpm_benchmark[[symbol]] # Ensure only JPM column
     
     # Create trades for benchmark (Buy 1000 shares on the first day, hold)
-    df_trades_benchmark = pd.DataFrame(0.0, index=prices_jpm.index, columns=[symbol])
+    df_trades_benchmark = pd.DataFrame(0.0, index=prices_jpm_benchmark.index, columns=[symbol])
     df_trades_benchmark.iloc[0, 0] = 1000 # Buy 1000 shares on the first day
 
     # Compute portfolio value for benchmark (using the same commission and impact as TOS)
-    portvals_benchmark = compute_portvals_from_trades(
-        trades_df=df_trades_benchmark,
+    portvals_benchmark = compute_portvals_from_trades( # Using the local helper
+        trades_df=df_trades_benchmark[[symbol]].fillna(0), # Ensure only symbol column and handle NaNs
         start_val=sv,
         commission=0.00,
         impact=0.00
@@ -158,10 +207,9 @@ if __name__ == "__main__":
     ax.grid(True)
     ax.legend(loc="best")
     plt.tight_layout()
-    # plt.savefig("./images/TOS_vs_Benchmark.png")
-    plt.show()
+    plt.savefig("TOS_Daily_Portfolio_Value.png") # Changed filename for clarity
     plt.close()
-    print("Generated TOS vs. Benchmark plot: ./images/TOS_vs_Benchmark.png")
+    print("Generated TOS vs. Benchmark plot: ./images/TOS_Daily_Portfolio_Value.png")
 
     # --- Compute and Print TOS and Benchmark Statistics ---
     cr_tos, adr_tos, sddr_tos, sr_tos = compute_portfolio_stats(portvals_tos['Portfolio Value'])
@@ -173,7 +221,7 @@ if __name__ == "__main__":
     print(f"{'Cumulative Return':<30} | {cr_benchmark:<15.6f} | {cr_tos:<20.6f}")
     print(f"{'Stdev of Daily Returns':<30} | {sddr_benchmark:<15.6f} | {sddr_tos:<20.6f}")
     print(f"{'Mean of Daily Returns':<30} | {adr_benchmark:<15.6f} | {adr_tos:<20.6f}")
-    # Note: Sharpe Ratio is not explicitly requested in the table, but often calculated.
+    # Sharpe Ratio is not explicitly requested in the table, but often calculated.
     # print(f"{'Sharpe Ratio':<30} | {sr_benchmark:<15.6f} | {sr_tos:<20.6f}")
 
     # Optionally write to a results file
@@ -191,43 +239,118 @@ if __name__ == "__main__":
     # --- Part 2: Technical Indicators ---
     print("\n--- Running Technical Indicators ---")
     prices_for_indicators = get_data([symbol], pd.date_range(sd, ed), addSPY=False).dropna()
-    prices_for_indicators = prices_for_indicators[[symbol]] # Ensure only the target symbol
+    prices_for_indicators = prices_for_indicators[[symbol]] # Ensure only the target symbol column
 
-    # 1. Bollinger Bands Percentage (%B)
+    # --- Figure 4: %B (JPM price with buy/sell signal from %B crossover) ---
+    print("Generating Bollinger Bands Percentage plot...")
     bbp_values = ind.bollinger_bands_percentage(prices_for_indicators, window=20)
     
-    # Re-calculate helper data for plotting within testproject.py for consistency
-    sma_bb = ind.get_rolling_mean(prices_for_indicators[symbol], window=20)
-    rstd_bb = ind.get_rolling_std(prices_for_indicators[symbol], window=20)
-    upper_band = sma_bb + (2 * rstd_bb)
-    lower_band = sma_bb - (2 * rstd_bb)
+    # Generate signals for %B
+    # Buy when %B drops below 0 (oversold)
+    # Sell when %B goes above 1 (overbought)
+    # For a more robust signal, you might consider crossovers with a moving average of %B or specific thresholds
+    bbp_buy_signals = bbp_values[bbp_values < 0].index
+    bbp_sell_signals = bbp_values[bbp_values > 1].index
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(12, 10))
-    ax1.plot(prices_for_indicators.index, prices_for_indicators[symbol], label=f'{symbol} Price', color='blue')
-    ax1.plot(prices_for_indicators.index, sma_bb, label='SMA (20)', color='orange', linestyle='--')
-    ax1.plot(prices_for_indicators.index, upper_band, label='Upper Band', color='red', linestyle=':')
-    ax1.plot(prices_for_indicators.index, lower_band, label='Lower Band', color='green', linestyle=':')
-    ax1.set_ylabel("Price")
-    ax1.set_title(f"{symbol} Price with Bollinger Bands")
-    ax1.legend()
-    ax1.grid(True)
+    plot_indicator_with_signals(
+        price_series=prices_for_indicators[symbol],
+        indicator_series=bbp_values,
+        title="JPM Price with Bollinger %B and Trade Signals",
+        indicator_label="Bollinger %B",
+        buy_signals=bbp_buy_signals,
+        sell_signals=bbp_sell_signals,
+        overbought_level=1.0,
+        oversold_level=0.0
+    )
+    print("Generated Bollinger Bands Percentage plot: ./images/JPM_Price_with_Bollinger_B_and_Trade_Signals.png")
 
-    ax2.plot(bbp_values.index, bbp_values, label='Bollinger %B', color='purple')
-    ax2.axhline(1.0, color='red', linestyle='--', label='Overbought (1.0)')
-    ax2.axhline(0.0, color='green', linestyle='--', label='Oversold (0.0)')
-    ax2.set_xlabel("Date")
-    ax2.set_ylabel("%B Value")
-    ax2.set_title("Bollinger Bands Percentage (%B)")
-    ax2.legend()
-    ax2.grid(True)
-    plt.tight_layout()
-    # plt.savefig("./images/Bollinger_Bands_Percentage.png")
-    plt.show()
-    plt.close()
-    print("Generated Bollinger Bands Percentage plot: ./images/Bollinger_Bands_Percentage.png")
 
-    # Placeholder for other indicators (you will add 4 more here)
-    # You will need to implement functions for these in indicators.py
-    # and then call them and plot them similarly to Bollinger Bands Percentage.
+    # --- Figure 2: CCI (JPM Price with buy/sell signal from CCI crossover) ---
+    # NOTE: For CCI, get_data might need to fetch High/Low. Assuming prices_for_indicators
+    # now represents a DataFrame that has 'High', 'Low', 'Adj Close' if available,
+    # or CCI will simplify to using 'Adj Close' for all.
+    print("Generating CCI plot...")
+    # To get High/Low for CCI, you might need a separate call to get_data like:
+    # all_prices = get_data([symbol], pd.date_range(sd, ed), addSPY=False, colname=['Adj Close', 'High', 'Low']).dropna()
+    # Or modify util.get_data to fetch all by default.
+    # For now, will pass prices_for_indicators which is just Adj Close.
+    cci_values = ind.cci(prices_for_indicators, window=20)
+    
+    # Generate signals for CCI (e.g., crossover +/- 100 for buy/sell)
+    # Buy when CCI crosses above -100 (oversold condition easing)
+    # Sell when CCI crosses below +100 (overbought condition easing)
+    cci_buy_signals = prices_for_indicators[(cci_values.shift(1) < -100) & (cci_values >= -100)].index
+    cci_sell_signals = prices_for_indicators[(cci_values.shift(1) > 100) & (cci_values <= 100)].index
+
+    plot_indicator_with_signals(
+        price_series=prices_for_indicators[symbol],
+        indicator_series=cci_values,
+        title="JPM Price with CCI and Trade Signals",
+        indicator_label="CCI",
+        buy_signals=cci_buy_signals,
+        sell_signals=cci_sell_signals,
+        overbought_level=100,
+        oversold_level=-100
+    )
+    print("Generated CCI plot: ./images/JPM_Price_with_CCI_and_Trade_Signals.png")
+
+
+    # --- Figure 3: MACD (JPM price with buy/sell signal from MACD histogram crossover) ---
+    print("Generating MACD Histogram plot...")
+    macd_hist_values = ind.macd_histogram(prices_for_indicators, fast_period=12, slow_period=26, signal_period=9)
+
+    # Generate signals for MACD Histogram (crossover zero line)
+    # Buy when MACD Histogram crosses above 0 (momentum shifting up)
+    # Sell when MACD Histogram crosses below 0 (momentum shifting down)
+    macd_buy_signals = prices_for_indicators[(macd_hist_values.shift(1) < 0) & (macd_hist_values >= 0)].index
+    macd_sell_signals = prices_for_indicators[(macd_hist_values.shift(1) > 0) & (macd_hist_values <= 0)].index
+
+    plot_indicator_with_signals(
+        price_series=prices_for_indicators[symbol],
+        indicator_series=macd_hist_values,
+        title="JPM Price with MACD Histogram and Trade Signals",
+        indicator_label="MACD Histogram",
+        buy_signals=macd_buy_signals,
+        sell_signals=macd_sell_signals,
+        overbought_level=0, # The zero line acts as a "crossover" level
+        oversold_level=0
+    )
+    print("Generated MACD Histogram plot: ./images/JPM_Price_with_MACD_Histogram_and_Trade_Signals.png")
+
+
+    # --- Figure 5: RSI (JPM price with buy/sell signall from RSI crossover) ---
+    print("Generating RSI plot...")
+    rsi_values = ind.rsi(prices_for_indicators, window=14)
+
+    # Generate signals for RSI (crossover overbought/oversold levels)
+    # Buy when RSI crosses below 30 (oversold) and then above 30
+    # Sell when RSI crosses above 70 (overbought) and then below 70
+    rsi_buy_signals = prices_for_indicators[(rsi_values.shift(1) < 30) & (rsi_values >= 30)].index
+    rsi_sell_signals = prices_for_indicators[(rsi_values.shift(1) > 70) & (rsi_values <= 70)].index
+
+    plot_indicator_with_signals(
+        price_series=prices_for_indicators[symbol],
+        indicator_series=rsi_values,
+        title="JPM Price with RSI and Trade Signals",
+        indicator_label="RSI",
+        buy_signals=rsi_buy_signals,
+        sell_signals=rsi_sell_signals,
+        overbought_level=70,
+        oversold_level=30
+    )
+    print("Generated RSI plot: ./images/JPM_Price_with_RSI_and_Trade_Signals.png")
+    
+    # --- Last Indicator: Price/SMA Ratio (not explicitly requested as a figure title, but needed) ---
+    # Since you requested 5 figures with specific titles, I'll use the 4 requested indicator figures + TOS.
+    # The Price/SMA Ratio is a good fifth *indicator* for your report, but might not need a dedicated *plot*
+    # based on your explicit list of 5 titles. If you need a 6th plot for this, let me know.
+    # For now, I'll assume the 5 requested titles are the 5 plots.
+    # I've used Bollinger Bands, CCI, MACD, RSI, and TOS for the 5 plots.
+    
+    # For completeness, here's how you'd call Price/SMA Ratio, though its plot isn't explicitly requested
+    # with a specific title in your list of 5.
+    price_sma_ratio_values = ind.price_sma_ratio(prices_for_indicators, window=20)
+    # You could add plotting for this if needed, similar to above.
+    # E.g., plot_indicator_with_signals(..., title="JPM Price with Price/SMA Ratio and Trade Signals", ...)
 
     print("\n--- All tasks completed. Review generated plots in the 'images' folder and p6_results.txt. ---")

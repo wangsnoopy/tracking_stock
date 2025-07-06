@@ -4,26 +4,14 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from util import get_data
 
-def author():  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :return: The GT username of the student  		  	   		 	 	 			  		 			 	 	 		 		 	
-    :rtype: str  		  	   		 	 	 			  		 			 	 	 		 		 	
-    """  		  	   		 	 	 			  		 			 	 	 		 		 	
-    return "awang758" 
+def author():
+    """
+    :return: The GT username of the student
+    :rtype: str
+    """
+    return "awang758" # Replace with your actual GT username
 
-# Helper function for plotting, similar to what you provided in reference
-def plot_indicator(df_plot, title, ylabel, xlabel="Date", save_path="./images/"):
-    plt.figure(figsize=(12, 7))
-    ax = df_plot.plot(title=title, fontsize=12)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    plt.grid(True)
-    plt.legend(loc="best")
-    plt.tight_layout()
-    # plt.savefig(f"{save_path}{title.replace(' ', '_').replace('/', '')}.png")
-    plt.show()
-    plt.close()
-
+# Helper functions (from previous steps, included for completeness)
 def get_rolling_mean(values, window):
     """Return rolling mean of given values, using specified window size."""
     return values.rolling(window=window).mean()
@@ -32,25 +20,13 @@ def get_rolling_std(values, window):
     """Return rolling standard deviation of given values, using specified window size."""
     return values.rolling(window=window).std()
 
+# --- Indicator 1: Bollinger Bands Percentage (%B) ---
 def bollinger_bands_percentage(prices, window=20):
     """
     Calculates the Bollinger Bands Percentage (%B).
-
-    %B = (Current Price - Lower Bollinger Band) / (Upper Bollinger Band - Lower Bollinger Band)
-
-    A value of %B > 1 indicates the price is above the upper band (overbought).
-    A value of %B < 0 indicates the price is below the lower band (oversold).
-    A value of %B = 0.5 indicates the price is at the SMA.
-
-    Parameters:
-        prices (pd.Series or pd.DataFrame): Stock prices.
-        window (int): The look-back window for SMA and Standard Deviation.
-
-    Returns:
-        pd.Series: A Series of Bollinger Bands Percentage values.
+    Returns a Series of Bollinger Bands Percentage values.
     """
     if isinstance(prices, pd.DataFrame):
-        # Assuming prices is a DataFrame with a single column (e.g., 'JPM')
         price_series = prices.iloc[:, 0]
     else:
         price_series = prices
@@ -58,79 +34,126 @@ def bollinger_bands_percentage(prices, window=20):
     sma = get_rolling_mean(price_series, window)
     rstd = get_rolling_std(price_series, window)
 
-    # Upper and Lower Bollinger Bands
     upper_band = sma + (2 * rstd)
     lower_band = sma - (2 * rstd)
 
-    # Calculate %B
     bbp = (price_series - lower_band) / (upper_band - lower_band)
-    
-    # Return as a Series with proper name
     return bbp.rename('Bollinger %B')
 
-# Example usage and plotting will be in the main execution block or testproject.py
-# For now, let's include a placeholder for direct execution for testing
-if __name__ == "__main__":
-    symbol = "JPM"
-    sd = dt.datetime(2008, 1, 1)
-    ed = dt.datetime(2009, 12, 31)
+# --- Indicator 2: Commodity Channel Index (CCI) ---
+def cci(prices, window=20):
+    """
+    Calculates the Commodity Channel Index (CCI).
+    CCI = (Typical Price - SMA of Typical Price) / (0.015 * Mean Deviation)
 
-    # Get data
-    prices = get_data([symbol], pd.date_range(sd, ed), addSPY=False).dropna()
-    prices = prices[[symbol]] # Ensure it's just the symbol we care about
+    Typical Price (TP) = (High + Low + Close) / 3
+    Mean Deviation = SMA of absolute difference between TP and its SMA
 
-    # Calculate Bollinger Bands Percentage
-    bbp_values = bollinger_bands_percentage(prices, window=20)
+    Returns a Series of CCI values.
+    """
+    if isinstance(prices, pd.DataFrame):
+        # We need High, Low, and Close for CCI. Assuming prices DataFrame contains these.
+        # If get_data only returns Adj Close, you'll need to adapt how you fetch data
+        # or simplify this indicator for Adj Close only (less accurate CCI).
+        # For this example, let's assume 'High', 'Low', 'Adj Close' are available.
+        # If not, you'll need to fetch them using get_data with appropriate columns.
+        try:
+            high = get_data([prices.columns[0]], prices.index, addSPY=False, colname='High').iloc[:, 0]
+            low = get_data([prices.columns[0]], prices.index, addSPY=False, colname='Low').iloc[:, 0]
+            close = prices.iloc[:, 0] # Assuming this is 'Adj Close'
+        except Exception:
+            # Fallback if High/Low not directly available, use Adj Close for simplicity
+            print(f"Warning: High/Low data not found for CCI. Using Adj Close for High/Low values. CCI calculation may be less accurate.")
+            high = prices.iloc[:, 0]
+            low = prices.iloc[:, 0]
+            close = prices.iloc[:, 0]
+            
+    else: # If prices is a Series (only Adj Close)
+        print(f"Warning: Only Adj Close price provided for CCI. Using Adj Close for High/Low values. CCI calculation may be less accurate.")
+        high = prices
+        low = prices
+        close = prices
 
-    # Prepare data for plotting
-    plot_df = pd.DataFrame(index=prices.index)
-    plot_df['JPM'] = prices[symbol]
-    plot_df['Bollinger %B'] = bbp_values
+    typical_price = (high + low + close) / 3
+    sma_tp = get_rolling_mean(typical_price, window)
+    
+    mean_deviation = get_rolling_mean(abs(typical_price - sma_tp), window)
+    
+    # Handle division by zero for mean_deviation
+    cci_values = (typical_price - sma_tp) / (0.015 * mean_deviation)
+    cci_values = cci_values.replace([np.inf, -np.inf], np.nan) # Replace inf with NaN
 
-    # Add SMA, Upper Band, Lower Band for context in the plot
-    sma = get_rolling_mean(prices[symbol], window=20)
-    rstd = get_rolling_std(prices[symbol], window=20)
-    upper_band = sma + (2 * rstd)
-    lower_band = sma - (2 * rstd)
+    return cci_values.rename('CCI')
 
-    plot_df['SMA'] = sma
-    plot_df['Upper Band'] = upper_band
-    plot_df['Lower Band'] = lower_band
+# --- Indicator 3: MACD (Refactored to return single vector - Histogram) ---
+def macd_histogram(prices, fast_period=12, slow_period=26, signal_period=9):
+    """
+    Calculates the MACD Histogram.
+    MACD Line = 12-period EMA - 26-period EMA
+    Signal Line = 9-period EMA of MACD Line
+    MACD Histogram = MACD Line - Signal Line
 
-    # Normalize price and SMA for better visualization if desired
-    # plot_df['JPM (Normalized)'] = plot_df['JPM'] / plot_df['JPM'].iloc[0]
-    # plot_df['SMA (Normalized)'] = plot_df['SMA'] / plot_df['JPM'].iloc[0]
-    # plot_df['Upper Band (Normalized)'] = plot_df['Upper Band'] / plot_df['JPM'].iloc[0]
-    # plot_df['Lower Band (Normalized)'] = plot_df['Lower Band'] / plot_df['JPM'].iloc[0]
+    Returns a Series of MACD Histogram values.
+    """
+    if isinstance(prices, pd.DataFrame):
+        price_series = prices.iloc[:, 0]
+    else:
+        price_series = prices
 
+    ema_fast = price_series.ewm(span=fast_period, adjust=False).mean()
+    ema_slow = price_series.ewm(span=slow_period, adjust=False).mean()
 
-    # Plotting
-    # We will use two subplots for clarity: Price with Bands, and %B
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(12, 10))
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal_period, adjust=False).mean()
 
-    # Plot 1: Price with Bollinger Bands
-    ax1.plot(plot_df.index, plot_df['JPM'], label='JPM Price', color='blue')
-    ax1.plot(plot_df.index, plot_df['SMA'], label='SMA (20)', color='orange', linestyle='--')
-    ax1.plot(plot_df.index, plot_df['Upper Band'], label='Upper Band', color='red', linestyle=':')
-    ax1.plot(plot_df.index, plot_df['Lower Band'], label='Lower Band', color='green', linestyle=':')
-    ax1.set_ylabel("Price")
-    ax1.set_title("JPM Price with Bollinger Bands")
-    ax1.legend()
-    ax1.grid(True)
+    macd_hist = macd_line - signal_line
+    return macd_hist.rename('MACD Histogram')
 
-    # Plot 2: Bollinger Bands Percentage (%B)
-    ax2.plot(plot_df.index, plot_df['Bollinger %B'], label='Bollinger %B', color='purple')
-    ax2.axhline(1.0, color='red', linestyle='--', label='Overbought (1.0)')
-    ax2.axhline(0.0, color='green', linestyle='--', label='Oversold (0.0)')
-    ax2.set_xlabel("Date")
-    ax2.set_ylabel("%B Value")
-    ax2.set_title("Bollinger Bands Percentage (%B)")
-    ax2.legend()
-    ax2.grid(True)
+# --- Indicator 4: Relative Strength Index (RSI) ---
+def rsi(prices, window=14):
+    """
+    Calculates the Relative Strength Index (RSI).
+    RSI = 100 - (100 / (1 + RS))
+    RS = Average Gain / Average Loss
 
-    plt.tight_layout()
-    # plt.savefig("./images/Bollinger_Bands_Percentage.png")
-    plt.show()
-    plt.close()
+    Returns a Series of RSI values.
+    """
+    if isinstance(prices, pd.DataFrame):
+        price_series = prices.iloc[:, 0]
+    else:
+        price_series = prices
 
-    print("Generated Bollinger Bands Percentage plot.")
+    deltas = price_series.diff()
+    gains = deltas.clip(lower=0)
+    losses = -deltas.clip(upper=0) # Make losses positive
+
+    # Use EWMA for average gain/loss for more common RSI calculation
+    # Or SMA if strictly adhering to your previous reference (but EWMA is standard for RSI)
+    avg_gain = gains.ewm(span=window, adjust=False).mean()
+    avg_loss = losses.ewm(span=window, adjust=False).mean()
+
+    # Handle division by zero
+    rs = np.where(avg_loss == 0, np.inf, avg_gain / avg_loss)
+    rsi_values = 100 - (100 / (1 + rs))
+    
+    # Replace inf values with NaN for proper plotting/handling
+    rsi_values = pd.Series(rsi_values, index=price_series.index).replace([np.inf, -np.inf], np.nan)
+
+    return rsi_values.rename('RSI')
+
+# --- Indicator 5: Price/SMA Ratio (Custom Indicator) ---
+def price_sma_ratio(prices, window=20):
+    """
+    Calculates the ratio of the current price to its Simple Moving Average (SMA).
+    This can be interpreted as a momentum-like indicator.
+    Returns a Series of Price/SMA Ratio values.
+    """
+    if isinstance(prices, pd.DataFrame):
+        price_series = prices.iloc[:, 0]
+    else:
+        price_series = prices
+
+    sma = get_rolling_mean(price_series, window)
+    
+    ratio = price_series / sma
+    return ratio.rename('Price/SMA Ratio')
