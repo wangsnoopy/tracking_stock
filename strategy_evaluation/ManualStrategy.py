@@ -18,27 +18,24 @@ class ManualStrategy:
         prices_all = get_data([symbol], dates)
         prices = prices_all[[symbol]].ffill().bfill()
 
-        # Compute indicators
-        sma_ratio = indicators.compute_price_sma_ratio(prices, window=20)
-        bbp = indicators.compute_bbp(prices, window=20)
-        macd_line, signal_line = indicators.compute_macd(prices)
+        # Compute indicators (all return Series)
+        sma_ratio = indicators.price_sma_ratio(prices, window=20)
+        bbp = indicators.bollinger_bands_percentage(prices, window=20)
+        macd_hist = indicators.macd_histogram(prices)
 
         # Initialize trades DataFrame
         trades = pd.DataFrame(data=0, index=prices.index, columns=[symbol])
-        position = 0  # Current position: 0, 1000, -1000
+        position = 0  # 0 = no position, 1000 = long, -1000 = short
 
         for i in range(1, len(prices)):
             date = prices.index[i]
 
-            # Get indicator values for the day
-            sma_val = sma_ratio.loc[date, symbol]
-            bbp_val = bbp.loc[date, symbol]
-            macd_val = macd_line.loc[date, symbol]
-            signal_val = signal_line.loc[date, symbol]
+            sma_val = sma_ratio.loc[date]
+            bbp_val = bbp.loc[date]
+            macd_val = macd_hist.loc[date]
 
-            # Define entry and exit signals
-            long_signal = (sma_val < 0.95) and (bbp_val < 0.0) and (macd_val > signal_val)
-            short_signal = (sma_val > 1.05) and (bbp_val > 1.0) and (macd_val < signal_val)
+            long_signal = (sma_val < 0.98) and (bbp_val < 0.0) and (macd_val > 0)
+            short_signal = (sma_val > 1.02) and (bbp_val > 1.0) and (macd_val < 0)
 
             if position == 0:
                 if long_signal:
@@ -49,17 +46,18 @@ class ManualStrategy:
                     position = -1000
             elif position == 1000:
                 if short_signal:
-                    trades.loc[date] = -2000  # Close long + open short
+                    trades.loc[date] = -2000  # Sell 1000 + short 1000
                     position = -1000
                 elif not long_signal:
                     trades.loc[date] = -1000  # Close long
                     position = 0
             elif position == -1000:
                 if long_signal:
-                    trades.loc[date] = 2000  # Close short + open long
+                    trades.loc[date] = 2000  # Cover 1000 + long 1000
                     position = 1000
                 elif not short_signal:
                     trades.loc[date] = 1000  # Close short
                     position = 0
 
         return trades
+
