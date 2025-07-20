@@ -30,7 +30,6 @@ GT ID: 900897987 (replace with your GT ID)
 import datetime as dt
 import pandas as pd
 import util as ut
-import random
 import numpy as np
 import indicators
 import QLearner as ql
@@ -40,98 +39,108 @@ class StrategyLearner:
         self.verbose = verbose
         self.impact = impact
         self.commission = commission
-        self.learner = ql.QLearner(num_states=1000, num_actions=3, alpha=0.2,
-                                   gamma=0.9, rar=0.5, radr=0.99, dyna=0, verbose=False)
+        self.learner = ql.QLearner(
+            num_states=1000,
+            num_actions=3,
+            alpha=0.2,
+            gamma=0.9,
+            rar=0.5,
+            radr=0.99,
+            dyna=0,
+            verbose=False
+        )
+
+    def author(self):
+        return "awang758"
 
     def add_evidence(self, symbol="IBM", sd=dt.datetime(2008,1,1), ed=dt.datetime(2009,1,1), sv=100000):
         self.sv = sv
-        prices_all = ut.get_data([symbol], pd.date_range(sd, ed))
-        prices = prices_all[[symbol]].fillna(method="ffill").fillna(method="bfill")
-
-        # Calculate indicators
-        bb = indicators.BB(prices)
-        macd = indicators.MACD(prices)
-        rsi = indicators.RSI(prices)
-
-        # Normalize indicators
-        bb = (bb - bb.mean()) / bb.std()
-        macd = (macd - macd.mean()) / macd.std()
-        rsi = (rsi - rsi.mean()) / rsi.std()
-
-        # Combine into one DataFrame
-        indicators_df = pd.concat([bb, macd, rsi], axis=1).dropna()
-        indicators_df.columns = ['BB', 'MACD', 'RSI']
-
-        # Discretize states
-        states = self._compute_states(indicators_df)
-
-        # Calculate returns
-        future_prices = prices.shift(-5)
-        returns = (future_prices / prices) - 1.0
-
-        df = pd.DataFrame(index=indicators_df.index)
-        df['prices'] = prices[symbol]
-        df['returns'] = returns[symbol]
-
-        # Train learner
-        for i in range(10):  # Multiple passes for convergence
-            for j in range(len(df.index) - 5):
-                date = df.index[j]
-                next_date = df.index[j + 1]
-
-                s = states[j]
-                r = df['returns'].iloc[j + 5] * 1000  # Scale reward
-                a = self.learner.query(s, r)
-
-    def testPolicy(self, symbol="IBM", sd=dt.datetime(2009,1,1), ed=dt.datetime(2010,1,1), sv=100000):
-        prices_all = ut.get_data([symbol], pd.date_range(sd, ed))
-        prices = prices_all[[symbol]].fillna(method="ffill").fillna(method="bfill")
+        self.symbol = symbol
+        dates = pd.date_range(sd, ed)
+        prices_all = ut.get_data([symbol], dates)
+        prices = prices_all[[symbol]].ffill().bfill()
 
         # Compute indicators
-        bb = indicators.BB(prices)
-        macd = indicators.MACD(prices)
-        rsi = indicators.RSI(prices)
+        bbp = indicators.bollinger_bands_percentage(prices)
+        macd = indicators.macd_histogram(prices)
+        rsi = indicators.rsi(prices)
 
-        bb = (bb - bb.mean()) / bb.std()
+        # Normalize
+        bbp = (bbp - bbp.mean()) / bbp.std()
         macd = (macd - macd.mean()) / macd.std()
         rsi = (rsi - rsi.mean()) / rsi.std()
 
-        indicators_df = pd.concat([bb, macd, rsi], axis=1).dropna()
-        indicators_df.columns = ['BB', 'MACD', 'RSI']
+        # Combine
+        df_indicators = pd.concat([bbp, macd, rsi], axis=1).dropna()
+        df_indicators.columns = ['BBP', 'MACD', 'RSI']
 
-        trades = pd.DataFrame(index=prices.index)
-        trades[symbol] = 0
+        # Future return
+        returns = prices.shift(-5) / prices - 1.0
+        returns = returns[symbol].loc[df_indicators.index]
+
+        # Discretize
+        states = self._compute_states(df_indicators)
+
+        for epoch in range(10):
+            for i in range(len(states) - 5):
+                s = states[i]
+                r = returns.iloc[i + 5] * 1000  # reward scaling
+                if i == 0:
+                    self.learner.querysetstate(s)
+                else:
+                    self.learner.query(s, r)
+
+    def testPolicy(self, symbol="IBM", sd=dt.datetime(2009,1,1), ed=dt.datetime(2010,1,1), sv=100000):
+        dates = pd.date_range(sd, ed)
+        prices_all = ut.get_data([symbol], dates)
+        prices = prices_all[[symbol]].ffill().bfill()
+
+        # Compute indicators
+        bbp = indicators.bollinger_bands_percentage(prices)
+        macd = indicators.macd_histogram(prices)
+        rsi = indicators.rsi(prices)
+
+        # Normalize
+        bbp = (bbp - bbp.mean()) / bbp.std()
+        macd = (macd - macd.mean()) / macd.std()
+        rsi = (rsi - rsi.mean()) / rsi.std()
+
+        df_indicators = pd.concat([bbp, macd, rsi], axis=1).dropna()
+        df_indicators.columns = ['BBP', 'MACD', 'RSI']
+
+        trades = pd.DataFrame(0, index=prices.index, columns=[symbol])
         holdings = 0
 
-        states = self._compute_states(indicators_df)
+        states = self._compute_states(df_indicators)
 
-        for i in range(len(states)):
+        for i, date in enumerate(df_indicators.index):
             s = states[i]
-            a = self.learner.querysetstate(s)
+            action = self.learner.querysetstate(s)
 
-            if a == 0:  # Sell
+            if action == 0:  # sell
                 if holdings == 1000:
-                    trades.iloc[i][symbol] = -2000
+                    trades.at[date, symbol] = -2000
                     holdings = -1000
                 elif holdings == 0:
-                    trades.iloc[i][symbol] = -1000
+                    trades.at[date, symbol] = -1000
                     holdings = -1000
-            elif a == 2:  # Buy
+            elif action == 2:  # buy
                 if holdings == -1000:
-                    trades.iloc[i][symbol] = 2000
+                    trades.at[date, symbol] = 2000
                     holdings = 1000
                 elif holdings == 0:
-                    trades.iloc[i][symbol] = 1000
+                    trades.at[date, symbol] = 1000
                     holdings = 1000
-            # Action 1 is hold → no trade
+            # action == 1 → hold
 
         return trades
 
     def _compute_states(self, df):
+        # Discretize each indicator into 10 bins and create composite state
         bins = 10
-        bb_bins = pd.qcut(df['BB'], bins, labels=False, duplicates='drop')
+        bbp_bins = pd.qcut(df['BBP'], bins, labels=False, duplicates='drop')
         macd_bins = pd.qcut(df['MACD'], bins, labels=False, duplicates='drop')
         rsi_bins = pd.qcut(df['RSI'], bins, labels=False, duplicates='drop')
 
-        states = (bb_bins * 100) + (macd_bins * 10) + rsi_bins
+        states = (bbp_bins * 100) + (macd_bins * 10) + rsi_bins
         return states.fillna(0).astype(int).values
