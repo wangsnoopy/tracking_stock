@@ -9,6 +9,34 @@ import marketsimcode as ms
 import util as ut
 import os
 
+
+def trades_to_orders(trades_df):
+    """
+    Convert trades DataFrame (daily holdings) to orders DataFrame.
+    """
+    orders = []
+
+    for symbol in trades_df.columns:
+        prev_shares = 0
+        for date, shares in trades_df[symbol].iteritems():
+            delta = shares - prev_shares
+            if delta > 0:
+                orders.append({'Date': date, 'Symbol': symbol, 'Order': 'BUY', 'Shares': delta})
+            elif delta < 0:
+                orders.append({'Date': date, 'Symbol': symbol, 'Order': 'SELL', 'Shares': -delta})
+            prev_shares = shares
+
+    orders_df = pd.DataFrame(orders)
+    if not orders_df.empty:
+        orders_df.set_index('Date', inplace=True)
+        orders_df.index = pd.to_datetime(orders_df.index)
+        orders_df.sort_index(inplace=True)
+    else:
+        orders_df = pd.DataFrame(columns=['Symbol', 'Order', 'Shares'])
+
+    return orders_df
+
+
 def run():
     symbol = 'JPM'
     start_in = dt.datetime(2008, 1, 1)
@@ -17,7 +45,6 @@ def run():
     end_out = dt.datetime(2011, 12, 31)
     start_val = 100000
 
-    # Ensure image directory exists
     os.makedirs("images", exist_ok=True)
 
     # Manual Strategy
@@ -25,8 +52,11 @@ def run():
     trades_manual_in = ms_strategy.testPolicy(symbol=symbol, sd=start_in, ed=end_in, sv=start_val)
     trades_manual_out = ms_strategy.testPolicy(symbol=symbol, sd=start_out, ed=end_out, sv=start_val)
 
-    portvals_manual_in = ms.compute_portvals(trades_manual_in, start_val=start_val)
-    portvals_manual_out = ms.compute_portvals(trades_manual_out, start_val=start_val)
+    orders_manual_in = trades_to_orders(trades_manual_in)
+    orders_manual_out = trades_to_orders(trades_manual_out)
+
+    portvals_manual_in = ms.compute_portvals(orders_manual_in, start_val=start_val)
+    portvals_manual_out = ms.compute_portvals(orders_manual_out, start_val=start_val)
 
     # Strategy Learner
     sl = StrategyLearner(verbose=False, impact=0.0)
@@ -34,8 +64,11 @@ def run():
     trades_learner_in = sl.testPolicy(symbol=symbol, sd=start_in, ed=end_in, sv=start_val)
     trades_learner_out = sl.testPolicy(symbol=symbol, sd=start_out, ed=end_out, sv=start_val)
 
-    portvals_learner_in = ms.compute_portvals(trades_learner_in, start_val=start_val)
-    portvals_learner_out = ms.compute_portvals(trades_learner_out, start_val=start_val)
+    orders_learner_in = trades_to_orders(trades_learner_in)
+    orders_learner_out = trades_to_orders(trades_learner_out)
+
+    portvals_learner_in = ms.compute_portvals(orders_learner_in, start_val=start_val)
+    portvals_learner_out = ms.compute_portvals(orders_learner_out, start_val=start_val)
 
     # Normalize
     portvals_manual_in /= portvals_manual_in.iloc[0]
@@ -67,7 +100,6 @@ def run():
     plt.savefig("images/experiment1_out_sample.png")
     plt.close()
 
-    # Performance metrics
     def print_stats(portvals, label):
         daily_returns = portvals.pct_change().dropna()
         cum_return = portvals.iloc[-1] / portvals.iloc[0] - 1
@@ -87,3 +119,4 @@ def run():
 
 if __name__ == "__main__":
     run()
+
