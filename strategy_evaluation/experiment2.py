@@ -12,7 +12,7 @@ def normalize(df):
     return df / df.iloc[0]
 
 
-def experiment2():
+def run():
     symbol = "JPM"
     start_date = dt.datetime(2008, 1, 1)
     end_date = dt.datetime(2009, 12, 31)
@@ -22,7 +22,7 @@ def experiment2():
     manual = ManualStrategy()
     learner = StrategyLearner(verbose=False, impact=0.0)
 
-    # Get in-sample prices
+    # Get in-sample prices (optional here, but you keep for reference)
     prices = get_data([symbol], pd.date_range(start_date, end_date))
     prices = prices[[symbol]]
 
@@ -32,7 +32,7 @@ def experiment2():
     manual_portvals = normalize(manual_portvals)
 
     # Strategy Learner
-    learner.addEvidence(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
+    learner.add_evidence(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
     learner_trades = learner.testPolicy(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
     learner_portvals = compute_portvals(learner_trades, start_val=sv)
     learner_portvals = normalize(learner_portvals)
@@ -47,20 +47,25 @@ def experiment2():
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig("experiment2.png")
+    plt.savefig("images/experiment2.png")
     plt.show()
 
     # Performance statistics
-    print("Manual Strategy:")
-    print(f"Cumulative Return: {manual_portvals.iloc[-1] / manual_portvals.iloc[0] - 1:.4f}")
-    print(f"Standard Deviation: {manual_portvals.std()[0]:.4f}")
-    print(f"Mean Daily Return: {manual_portvals.pct_change().mean()[0]:.4f}")
+    def print_stats(portvals, label):
+        daily_returns = portvals.pct_change().dropna()
+        cum_return = portvals.iloc[-1] / portvals.iloc[0] - 1
+        std_daily_ret = daily_returns.std()
+        mean_daily_ret = daily_returns.mean()
 
-    print("\nStrategy Learner:")
-    print(f"Cumulative Return: {learner_portvals.iloc[-1] / learner_portvals.iloc[0] - 1:.4f}")
-    print(f"Standard Deviation: {learner_portvals.std()[0]:.4f}")
-    print(f"Mean Daily Return: {learner_portvals.pct_change().mean()[0]:.4f}")
+        print(f"{label}:")
+        print(f"  Cumulative Return: {cum_return:.4f}")
+        print(f"  Std of Daily Return: {std_daily_ret:.4f}")
+        print(f"  Mean Daily Return: {mean_daily_ret:.4f}")
+        print()
+
+    print_stats(manual_portvals, "Manual Strategy")
+    print_stats(learner_portvals, "Strategy Learner")
 
 
 if __name__ == "__main__":
-    experiment2()
+    run()
