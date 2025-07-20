@@ -12,7 +12,6 @@ import os
 def run_manual_strategy():
     print("Running Manual Strategy...")
     ms = ManualStrategy()
-    ms.add_evidence(symbol="JPM", sd=dt.datetime(2008, 1, 1), ed=dt.datetime(2009, 12, 31), sv=100000)
     manual_trades = ms.testPolicy(symbol="JPM", sd=dt.datetime(2008, 1, 1), ed=dt.datetime(2009, 12, 31), sv=100000)
     print("Manual strategy trades:")
     print(manual_trades.head())
