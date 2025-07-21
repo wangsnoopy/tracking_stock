@@ -40,13 +40,13 @@ class StrategyLearner:
         self.impact = impact
         self.commission = commission
         self.learner = ql.QLearner(
-            num_states=1000,
-            num_actions=4,
+            num_states=1500,
+            num_actions=3,
             alpha=0.2,
             gamma=0.9,
-            rar=0.6,
-            radr=0.95,
-            dyna=1,
+            rar=0.5,
+            radr=0.93,
+            dyna=0,
             verbose=False
         )
         self.sma_window = 20
@@ -87,7 +87,7 @@ class StrategyLearner:
         states = self._compute_states(df_indicators)
 
         # origin lopp
-        for epoch in range(10):
+        for epoch in range(30):
             for i in range(len(states) - 5):
                 s = states[i]
                 r = returns.iloc[i + 5] * 1000  # reward scaling
@@ -144,7 +144,7 @@ class StrategyLearner:
 
     def _compute_states(self, df):
         # Discretize each indicator into 10 bins and create composite state
-        bins = 10
+        bins = 12
         bbp_bins = pd.qcut(df['BBP'], bins, labels=False, duplicates='drop')
         macd_bins = pd.qcut(df['MACD'], bins, labels=False, duplicates='drop')
         rsi_bins = pd.qcut(df['RSI'], bins, labels=False, duplicates='drop')
