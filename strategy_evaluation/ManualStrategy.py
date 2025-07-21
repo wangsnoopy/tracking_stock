@@ -34,8 +34,8 @@ class ManualStrategy:
             bbp_val = bbp.loc[date]
             macd_val = macd_hist.loc[date]
 
-            long_signal = (sma_val < 0.98) and (bbp_val < 0.0) and (macd_val > 0)
-            short_signal = (sma_val > 1.02) and (bbp_val > 1.0) and (macd_val < 0)
+            long_signal = (sma_val < 0.99) and (bbp_val < 0.2) and (macd_val > 0.5)
+            short_signal = (sma_val > 1.01) and (bbp_val > 0.8) and (macd_val < -0.5)
 
             if position == 0:
                 if long_signal:
