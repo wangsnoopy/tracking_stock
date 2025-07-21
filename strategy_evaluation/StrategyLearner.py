@@ -41,12 +41,12 @@ class StrategyLearner:
         self.commission = commission
         self.learner = ql.QLearner(
             num_states=1000,
-            num_actions=3,
+            num_actions=4,
             alpha=0.2,
             gamma=0.9,
             rar=0.6,
             radr=0.95,
-            dyna=50,
+            dyna=1,
             verbose=False
         )
         self.sma_window = 20
@@ -87,7 +87,7 @@ class StrategyLearner:
         states = self._compute_states(df_indicators)
 
         # origin lopp
-        for epoch in range(20):
+        for epoch in range(10):
             for i in range(len(states) - 5):
                 s = states[i]
                 r = returns.iloc[i + 5] * 1000  # reward scaling
