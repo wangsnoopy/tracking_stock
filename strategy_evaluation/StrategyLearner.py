@@ -42,10 +42,10 @@ class StrategyLearner:
         self.learner = ql.QLearner(
             num_states=1500,
             num_actions=3,
-            alpha=0.2,
-            gamma=0.9,
+            alpha=0.1,
+            gamma=0.99,
             rar=0.5,
-            radr=0.93,
+            radr=0.99,
             dyna=0,
             verbose=False
         )
