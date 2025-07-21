@@ -104,11 +104,9 @@ class StrategyLearner:
 
             for i in range(1, len(states) - 5):
                 s = states[i]
-                action = self.learner.querysetstate(s)
-        
+                action = self.learner.querysetstate(s, 0)
                 future_return = returns.iloc[i + 5]
-
-        # Simulate reward based on action taken and position
+                # Simulate reward based on action taken and position
                 reward = 0
                 if action == 0:  # SELL
                     if position == 1:  # was long

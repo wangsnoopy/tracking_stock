@@ -39,24 +39,24 @@ class ManualStrategy:
 
             if position == 0:
                 if long_signal:
-                    trades.loc[date] = 1000
-                    position = 1000
+                    trades.loc[date] = 100
+                    position = 100
                 elif short_signal:
-                    trades.loc[date] = -1000
-                    position = -1000
-            elif position == 1000:
+                    trades.loc[date] = -100
+                    position = -100
+            elif position == 100:
                 if short_signal:
-                    trades.loc[date] = -2000  # Sell 1000 + short 1000
-                    position = -1000
+                    trades.loc[date] = -200
+                    position = -100
                 elif not long_signal:
-                    trades.loc[date] = -1000  # Close long
+                    trades.loc[date] = -100
                     position = 0
-            elif position == -1000:
+            elif position == -100:
                 if long_signal:
-                    trades.loc[date] = 2000  # Cover 1000 + long 1000
+                    trades.loc[date] = 200
                     position = 1000
                 elif not short_signal:
-                    trades.loc[date] = 1000  # Close short
+                    trades.loc[date] = 100  # Close short
                     position = 0
 
         return trades
