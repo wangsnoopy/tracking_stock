@@ -106,17 +106,28 @@ class StrategyLearner(object):
 
 
 
+    # def X_factors(self, df_trades, day_sma, day_bb, day_m):
+    #     #vectorize and combine X
+
+    #     sma = indicators.sma(df_trades, day_sma)
+    #     sma_id = sma / df_trades - 1
+    #     bb = indicators.bollingerband(df_trades, day_bb)
+    #     momentum = indicators.get_momentum(df_trades, day_m)
+
+    #     X = pd.concat([sma_id, bb, momentum], axis=1)
+    #     X.columns = ['sma', 'bb', 'momentum']
+    #     return X
     def X_factors(self, df_trades, day_sma, day_bb, day_m):
-        #vectorize and combine X
+    # use custom indicators
+        rsi = indicators.rsi(df_trades)
+        macd_hist = indicators.macd_histogram(df_trades)
+        bbp = indicators.bollinger_bands_percentage(df_trades, window=day_bb)
 
-        sma = indicators.sma(df_trades, day_sma)
-        sma_id = sma / df_trades - 1
-        bb = indicators.bollingerband(df_trades, day_bb)
-        momentum = indicators.get_momentum(df_trades, day_m)
-
-        X = pd.concat([sma_id, bb, momentum], axis=1)
-        X.columns = ['sma', 'bb', 'momentum']
+        X = pd.concat([rsi, macd_hist, bbp], axis=1)
+        X.columns = ['rsi', 'macd_hist', 'bbp']
         return X
+
+
 
 
     def add_evidence(  		  	   		  	  			  		 			     			  	 
