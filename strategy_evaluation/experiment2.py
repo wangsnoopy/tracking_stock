@@ -1,13 +1,13 @@
 import datetime as dt
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np # Make sure numpy is imported for np.sum
+import numpy as np
+import os # Make sure os is imported for directory operations
 
 from marketsimcode import compute_portvals
 from ManualStrategy import ManualStrategy
 from StrategyLearner import StrategyLearner
-from util import get_data
-import os
+from util import get_data # Assuming util.py provides get_data
 
 # Moved print_stats to the top level
 def print_stats(portvals, label):
@@ -39,15 +39,8 @@ def run():
     # Ensure image directory exists
     os.makedirs("images", exist_ok=True)
 
-    # Manual Strategy setup - will keep this for initial comparison plot if needed, but primarily focus on SL
     manual = ManualStrategy()
     manual_trades = manual.testPolicy(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
-    # Corrected: Commission and impact are from report for manual strategy, but for this experiment,
-    # the requirement for SL is commission $0.00 and varying impact.
-    # We should calculate the manual strategy's portvals with the *report's* default commission/impact
-    # unless Experiment 2 explicitly requires manual strategy to be calculated with 0 commission/impact.
-    # The prompt says "with a commission of $0.00" for the StrategyLearner in Experiment 2.
-    # For comparison, let's keep manual strategy's typical costs in this chart for now.
     manual_portvals = compute_portvals(manual_trades, start_val=sv, commission=9.95, impact=0.005)
 
 
@@ -58,25 +51,20 @@ def run():
 
     for impact_val in impact_values:
         print(f"\nRunning StrategyLearner with impact = {impact_val}")
-        # IMPORTANT: A new learner instance for each impact value
         sl = StrategyLearner(verbose=False, impact=impact_val, commission=0.0) # Commission is $0.00
         sl.add_evidence(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
         learner_trades = sl.testPolicy(symbol=symbol, sd=start_date, ed=end_date, sv=sv)
-        # Pass the current impact_val to compute_portvals for the learner
         learner_portvals = compute_portvals(learner_trades, start_val=sv, commission=0.00, impact=impact_val)
 
         learner_portvals_by_impact[impact_val] = normalize(learner_portvals)
         learner_trades_by_impact[impact_val] = learner_trades
 
-        # Print stats for each impact level
         print_stats(normalize(learner_portvals), f"StrategyLearner (Impact={impact_val})")
-        # Check if trades are different (you can add more robust checks)
         print(f"  Trades count: {np.sum(learner_trades.abs().values > 0)}")
 
 
     # Plotting for Experiment 2: Effect of Impact on StrategyLearner Performance
     plt.figure(figsize=(12, 7))
-    # Keep Manual Strategy for context if desired, or remove if the focus is purely on SL impact
     plt.plot(normalize(manual_portvals), label="Manual Strategy (for comparison)", color='blue', linestyle='--')
     for impact_val, portvals in learner_portvals_by_impact.items():
         plt.plot(portvals, label=f"Strategy Learner (Impact={impact_val})")
@@ -90,9 +78,9 @@ def run():
     plt.savefig("images/experiment2_impact_analysis.png")
     plt.close()
 
-    # You might want another plot/table specifically showing a metric vs. impact
     # Example: Cumulative Return vs. Impact
-    impact_cr = {imp: (pv.iloc[-1] / pv.iloc[0] - 1) for imp, pv in learner_portvals_by_impact.items()}
+    # Corrected: Access the scalar value using .item()
+    impact_cr = {imp: (pv.iloc[-1] / pv.iloc[0] - 1).item() for imp, pv in learner_portvals_by_impact.items()}
 
     impact_trade_counts = {imp: np.sum(trades.abs().values > 0) for imp, trades in learner_trades_by_impact.items()}
 
@@ -101,7 +89,9 @@ def run():
     for imp in impact_values:
         cr_val = impact_cr.get(imp, float('nan'))
         trades_count = impact_trade_counts.get(imp, float('nan'))
-        print(f"{imp:<10.6f} {cr_val:<20.6f} {trades_count:<20}") # Changed print format for impact
+        # Ensure trade_count is formatted as integer or float, not a Pandas type
+        print(f"{imp:<10.6f} {cr_val:<20.6f} {trades_count:<20}")
+
 
     # Plot Cumulative Return vs Impact
     plt.figure(figsize=(8, 5))
