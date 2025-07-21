@@ -20,21 +20,32 @@ def testPolicy(symbol, sd, ed, sv=100000):
 
     days = 10
 
-    sma = indicators.sma(prices, days)
-    sma_id = sma/prices - 1
-    bb = indicators.bollingerband(prices, days)
-    #b = bb['lowerband']
-    #a = (prices - bb['lowerband'])
-    #bbp = (sma - bb['lowerband']) / (bb['upperband'] - bb['lowerband'])
-    momentum = indicators.get_momentum(prices, days)
+    # others
+    # sma = indicators.sma(prices, days)
+    # sma_id = sma/prices - 1
+    # bb = indicators.bollingerband(prices, days)
+    # momentum = indicators.get_momentum(prices, days)
+
+    # mine:
+    # Use your custom indicators
+    bb = indicators.bollinger_bands_percentage(prices, window=10)  # BBP
+    macd_hist = indicators.macd_histogram(prices)  # MACD Histogram
+    rsi = indicators.rsi(prices)  # RSI
 
     holdings = pd.DataFrame(np.nan, index=prices.index, columns=['holds'])
 
+    # for i in range(prices.shape[0]):
+    #     if sma_id.iloc[i] < -0.003 and bb.iloc[i] < 0.2 and momentum.iloc[i] > -0.02:
+    #         holdings.iloc[i] = 1000
+    #     elif sma_id.iloc[i] > 0.00 and bb.iloc[i] > -0.35 and momentum.iloc[i] < 0.015:
+    #         holdings.iloc[i] = -1000
+
     for i in range(prices.shape[0]):
-        if sma_id.iloc[i] < -0.003 and bb.iloc[i] < 0.2 and momentum.iloc[i] > -0.02:
-            holdings.iloc[i] = 1000
-        elif sma_id.iloc[i] > 0.00 and bb.iloc[i] > -0.35 and momentum.iloc[i] < 0.015:
-            holdings.iloc[i] = -1000
+        if bb.iloc[i] < 0.2 and macd_hist.iloc[i] > 0 and rsi.iloc[i] < 30:
+            holdings.iloc[i] = 1000  # Buy
+        elif bb.iloc[i] > 0.8 and macd_hist.iloc[i] < 0 and rsi.iloc[i] > 70:
+            holdings.iloc[i] = -1000  # Sell
+
 
     holdings.ffill(inplace=True)
     holdings.fillna(0, inplace=True)
