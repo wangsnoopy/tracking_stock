@@ -57,7 +57,11 @@ def compute_portvals(trades_df, start_val=100000, commission=9.95, impact=0.005)
 
     # Holdings: cumulative sum
     holdings = trades.cumsum()
-    holdings.loc[holdings.index[0], 'CASH'] += start_val # Add starting cash to the first day
+
+    # Origin
+    # holdings.loc[holdings.index[0], 'CASH'] += start_val # Add starting cash to the first day
+    # Change
+    holdings.iloc[0, holdings.columns.get_loc('CASH')] = start_val + trades.iloc[0]['CASH']
 
     # Daily portfolio value
     # Make sure prices and holdings have the same columns for multiplication
