@@ -21,15 +21,15 @@ def testPolicy(symbol, sd, ed, sv=100000):
     days = 10
 
     # others
-    # sma = indicators.sma(prices, days)
-    # sma_id = sma/prices - 1
+    sma = indicators.get_rolling_mean(prices, days)
+    sma_id = sma/prices - 1
     # bb = indicators.bollingerband(prices, days)
     # momentum = indicators.get_momentum(prices, days)
 
     # mine:
     # Use your custom indicators
     bb = indicators.bollinger_bands_percentage(prices, window=10)  # BBP
-    macd_hist = indicators.macd_histogram(prices)  # MACD Histogram
+    # macd_hist = indicators.macd_histogram(prices)  # MACD Histogram
     rsi = indicators.rsi(prices)  # RSI
 
     holdings = pd.DataFrame(np.nan, index=prices.index, columns=['holds'])
@@ -41,9 +41,9 @@ def testPolicy(symbol, sd, ed, sv=100000):
     #         holdings.iloc[i] = -1000
 
     for i in range(prices.shape[0]):
-        if bb.iloc[i] < 0.2 and macd_hist.iloc[i] > 0 and rsi.iloc[i] < 30:
+        if bb.iloc[i] < 0.2 and sma_id.iloc[i] < -0.003 and rsi.iloc[i] < 30:
             holdings.iloc[i] = 1000  # Buy
-        elif bb.iloc[i] > 0.8 and macd_hist.iloc[i] < 0 and rsi.iloc[i] > 70:
+        elif bb.iloc[i] > 0.8 and sma_id.iloc[i] > 0.00 and rsi.iloc[i] > 70:
             holdings.iloc[i] = -1000  # Sell
 
 

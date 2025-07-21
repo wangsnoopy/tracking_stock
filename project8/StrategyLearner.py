@@ -122,9 +122,11 @@ class StrategyLearner(object):
         rsi = indicators.rsi(df_trades)
         macd_hist = indicators.macd_histogram(df_trades)
         bbp = indicators.bollinger_bands_percentage(df_trades, window=day_bb)
+        sma = indicators.get_rolling_mean(df_trades, day_sma)
+        sma_id = sma / df_trades - 1
 
-        X = pd.concat([rsi, macd_hist, bbp], axis=1)
-        X.columns = ['rsi', 'macd_hist', 'bbp']
+        X = pd.concat([rsi, sma_id, bbp], axis=1)
+        X.columns = ['rsi', 'sma', 'bbp']
         return X
 
 
