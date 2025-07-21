@@ -66,18 +66,20 @@ class StrategyLearner:
         prices = prices_all[[symbol]].ffill().bfill()
 
         # Compute indicators
+        sma_ratio = indicators.price_sma_ratio(prices)
         bbp = indicators.bollinger_bands_percentage(prices)
         macd = indicators.macd_histogram(prices)
-        rsi = indicators.rsi(prices)
+        # rsi = indicators.rsi(prices)
 
         # Normalize
+        sma_ratio = (sma_ratio - sma_ratio.mean()) / sma_ratio.std()
         bbp = (bbp - bbp.mean()) / bbp.std()
         macd = (macd - macd.mean()) / macd.std()
-        rsi = (rsi - rsi.mean()) / rsi.std()
+        # rsi = (rsi - rsi.mean()) / rsi.std()
 
         # Combine
-        df_indicators = pd.concat([bbp, macd, rsi], axis=1).dropna()
-        df_indicators.columns = ['BBP', 'MACD', 'RSI']
+        df_indicators = pd.concat([bbp, macd, sma_ratio], axis=1).dropna()
+        df_indicators.columns = ['BBP', 'MACD', 'SMA']
 
         # Future return
         returns = prices.shift(-5) / prices - 1.0
@@ -113,7 +115,7 @@ class StrategyLearner:
         rsi = (rsi - rsi.mean()) / rsi.std()
 
         df_indicators = pd.concat([bbp, macd, rsi], axis=1).dropna()
-        df_indicators.columns = ['BBP', 'MACD', 'RSI']
+        df_indicators.columns = ['BBP', 'MACD', 'SMA']
 
         trades = pd.DataFrame(0, index=prices.index, columns=[symbol])
         holdings = 0
@@ -147,7 +149,7 @@ class StrategyLearner:
         bins = 12
         bbp_bins = pd.qcut(df['BBP'], bins, labels=False, duplicates='drop')
         macd_bins = pd.qcut(df['MACD'], bins, labels=False, duplicates='drop')
-        rsi_bins = pd.qcut(df['RSI'], bins, labels=False, duplicates='drop')
+        rsi_bins = pd.qcut(df['SMA'], bins, labels=False, duplicates='drop')
 
         states = (bbp_bins * 100) + (macd_bins * 10) + rsi_bins
         return states.fillna(0).astype(int).values
