@@ -104,7 +104,7 @@ class StrategyLearner:
 
             for i in range(1, len(states) - 5):
                 s = states[i]
-                action = self.learner.querysetstate(s, 0)
+                action = self.learner.querysetstate(s)
                 future_return = returns.iloc[i + 5]
                 # Simulate reward based on action taken and position
                 reward = 0
