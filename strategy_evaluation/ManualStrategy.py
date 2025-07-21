@@ -97,9 +97,12 @@ class ManualStrategy:
         prices.bfill(inplace=True)
 
         # Get indicators
-        sma_ratio = indicators.get_sma_ratio(prices, window=20)
-        bbp = indicators.get_bollinger_band_percent(prices, window=20)
-        momentum = indicators.get_momentum(prices, window=10)
+        # sma_ratio = indicators.get_sma_ratio(prices, window=20)
+        # bbp = indicators.get_bollinger_band_percent(prices, window=20)
+        # macd_hist = indicators.get_momentum(prices, window=10)
+        sma_ratio = indicators.price_sma_ratio(prices, window=20)
+        bbp = indicators.bollinger_bands_percentage(prices, window=20)
+        macd_hist = indicators.macd_histogram(prices)
 
         # Create a DataFrame for trades
         trades = pd.DataFrame(index=prices.index, data=0, columns=[symbol])
@@ -111,19 +114,19 @@ class ManualStrategy:
             signal = 0
 
             # BUY SIGNAL
-            if bbp.iloc[i][symbol] < 0.2 and momentum.iloc[i][symbol] > 0 and sma_ratio.iloc[i][symbol] < 0.95:
+            if bbp.iloc[i][symbol] < 0.2 and macd_hist.iloc[i][symbol] > 0 and sma_ratio.iloc[i][symbol] < 0.95:
                 if position <= 0:
                     signal = 1000 - position
                     position = 1000
 
             # SELL SIGNAL
-            elif bbp.iloc[i][symbol] > 0.8 and momentum.iloc[i][symbol] < 0 and sma_ratio.iloc[i][symbol] > 1.05:
+            elif bbp.iloc[i][symbol] > 0.8 and macd_hist.iloc[i][symbol] < 0 and sma_ratio.iloc[i][symbol] > 1.05:
                 if position >= 0:
                     signal = -1000 - position
                     position = -1000
 
             # EXIT SIGNAL (mean reversion / closing position)
-            elif abs(momentum.iloc[i][symbol]) < 0.01 and abs(sma_ratio.iloc[i][symbol] - 1.0) < 0.01:
+            elif abs(macd_hist.iloc[i][symbol]) < 0.01 and abs(sma_ratio.iloc[i][symbol] - 1.0) < 0.01:
                 if position != 0:
                     signal = -position
                     position = 0
