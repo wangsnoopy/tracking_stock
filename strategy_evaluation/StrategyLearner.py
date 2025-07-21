@@ -40,13 +40,13 @@ class StrategyLearner:
         self.impact = impact
         self.commission = commission
         self.learner = ql.QLearner(
-            num_states=1000,
+            num_states=1728,
             num_actions=3,
             alpha=0.2,
             gamma=0.9,
-            rar=0.5,
-            radr=0.99,
-            dyna=0,
+            rar=0.6,
+            radr=0.95,
+            dyna=50,
             verbose=False
         )
         self.sma_window = 20
@@ -87,43 +87,14 @@ class StrategyLearner:
         states = self._compute_states(df_indicators)
 
         # origin lopp
-        # for epoch in range(10):
-        #     for i in range(len(states) - 5):
-        #         s = states[i]
-        #         r = returns.iloc[i + 5] * 1000  # reward scaling
-        #         if i == 0:
-        #             self.learner.querysetstate(s)
-        #         else:
-        #             self.learner.query(s, r)
-
-
-        # New loop to check:
-        for epoch in range(10):
-            self.learner.querysetstate(states[0])
-            position = 0  # -1 short, 0 neutral, 1 long
-
-            for i in range(1, len(states) - 5):
+        for epoch in range(30):
+            for i in range(len(states) - 5):
                 s = states[i]
-                action = self.learner.querysetstate(s)
-                future_return = returns.iloc[i + 5]
-                # Simulate reward based on action taken and position
-                reward = 0
-                if action == 0:  # SELL
-                    if position == 1:  # was long
-                        reward = -future_return
-                    elif position == 0:
-                        reward = -0.5 * future_return
-                    position = -1
-                elif action == 2:  # BUY
-                    if position == -1:  # was short
-                        reward = future_return
-                    elif position == 0:
-                        reward = 0.5 * future_return
-                    position = 1
+                r = returns.iloc[i + 5] * 1000  # reward scaling
+                if i == 0:
+                    self.learner.querysetstate(s)
                 else:
-                    reward = 0  # hold
-
-                self.learner.query(s, reward * 1000)
+                    self.learner.query(s, r)
 
     # Origin 
     def testPolicy(self, symbol="IBM", sd=dt.datetime(2009,1,1), ed=dt.datetime(2010,1,1), sv=100000):
@@ -173,12 +144,10 @@ class StrategyLearner:
 
     def _compute_states(self, df):
         # Discretize each indicator into 10 bins and create composite state
-        bins = 10
+        bins = 12
         bbp_bins = pd.qcut(df['BBP'], bins, labels=False, duplicates='drop')
         macd_bins = pd.qcut(df['MACD'], bins, labels=False, duplicates='drop')
         rsi_bins = pd.qcut(df['RSI'], bins, labels=False, duplicates='drop')
 
         states = (bbp_bins * 100) + (macd_bins * 10) + rsi_bins
         return states.fillna(0).astype(int).values
-
-
